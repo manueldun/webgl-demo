@@ -42,8 +42,208 @@ function getBinaryFile(path, fileName) {
         oReq.send(null);
     });
 }
-function loadMesh(mesh) {
 
+function initViewProjectionMatrix() {
+    //inputData.deltaPosition.forward
+    //inputData.deltaPosition.left
+    //inputData.deltaMouse.x
+    //inputData.deltaMouse.y
+    this.forwardDirection = glMatrix.vec4.fromValues(0.0, 0.0, -1.0);
+
+    this.position = glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+
+    return (inputData) => {
+
+        let leftDirection = glMatrix.vec3.create();
+        glMatrix.vec3.cross(leftDirection, [0, 1, 0], this.forwardDirection);
+        glMatrix.vec3.normalize(leftDirection, leftDirection);
+
+        let upDirection = glMatrix.vec3.create();
+        glMatrix.vec3.cross(upDirection, this.forwardDirection, leftDirection);
+        glMatrix.vec3.normalize(upDirection, upDirection);
+
+
+        let forwardDisplacement = glMatrix.vec3.create();
+        glMatrix.vec3.mul(forwardDisplacement, this.forwardDirection,
+            [inputData.deltaPosition.forward, inputData.deltaPosition.forward, inputData.deltaPosition.forward]);
+        glMatrix.vec3.add(this.position, this.position, forwardDisplacement);
+
+        let leftDisplacement = glMatrix.vec3.create();
+        glMatrix.vec3.mul(leftDisplacement, leftDirection,
+            [inputData.deltaPosition.left, inputData.deltaPosition.left, inputData.deltaPosition.left]);
+        glMatrix.vec3.add(this.position, this.position, leftDisplacement);
+
+
+
+
+        let horizontalRotationMatrix = glMatrix.mat4.create();
+        glMatrix.mat4.rotate(horizontalRotationMatrix, horizontalRotationMatrix,
+            inputData.deltaMouse.x * 0.05, upDirection);
+
+
+        let forwardDirectionVec4 = glMatrix.vec4.fromValues(this.forwardDirection[0], this.forwardDirection[1], this.forwardDirection[2], 1.0);
+        glMatrix.vec4.transformMat4(forwardDirectionVec4, forwardDirectionVec4, horizontalRotationMatrix);
+
+        let verticalRotationMatrix = glMatrix.mat4.create();
+        glMatrix.mat4.rotate(verticalRotationMatrix, verticalRotationMatrix,
+            inputData.deltaMouse.y * 0.05, leftDirection);
+
+        glMatrix.vec4.transformMat4(forwardDirectionVec4, forwardDirectionVec4, verticalRotationMatrix);
+
+        this.forwardDirection = glMatrix.vec3.fromValues(forwardDirectionVec4[0], forwardDirectionVec4[1], forwardDirectionVec4[2]);
+
+        inputData.deltaMouse.x = 0
+        inputData.deltaMouse.y = 0
+        let rotationMatrix = glMatrix.mat4.fromValues(
+            -leftDirection[0], -leftDirection[1], -leftDirection[2], 0,
+            upDirection[0], upDirection[1], upDirection[2], 0,
+            forwardDirectionVec4[0], forwardDirectionVec4[1], forwardDirectionVec4[2], 0,
+            0, 0, 0, 1
+        );
+
+
+        glMatrix.mat4.transpose(rotationMatrix, rotationMatrix);
+        let translateMatrix = glMatrix.mat4.create();
+        glMatrix.mat4.translate(translateMatrix, translateMatrix, this.position);
+
+        var viewMatrix = glMatrix.mat4.create();
+        glMatrix.mat4.mul(viewMatrix, rotationMatrix, translateMatrix);
+
+
+        let projectionMatrix = glMatrix.mat4.create();
+        glMatrix.mat4.perspective(projectionMatrix, 35 * (180 / Math.PI), 1280 / 720, 0.1, 1000);
+
+
+        let mvpMatrix = glMatrix.mat4.create();
+        glMatrix.mat4.mul(mvpMatrix, projectionMatrix, viewMatrix);
+
+
+        if (this.position[0] === NaN) {
+            console.log(delta);
+        }
+        return mvpMatrix;
+    }
+
+}
+function initInputLogic(canvas) {
+
+
+
+    let keyW = false;
+    let keyS = false;
+    let keyA = false;
+    let keyD = false;
+
+    window.addEventListener('keydown',
+        function moveForward(e) {
+            switch (e.code) {
+                case 'KeyW':
+                    keyW = true;
+                    break;
+                case 'KeyS':
+                    keyS = true;
+                    break;
+                case 'KeyA':
+                    keyA = true;
+                    break;
+                case 'KeyD':
+                    keyD = true;
+                    break;
+                default:
+            }
+        });
+
+    window.addEventListener('keyup',
+        function moveForward(e) {
+            switch (e.code) {
+                case 'KeyW':
+                    keyW = false;
+                    break;
+                case 'KeyS':
+                    keyS = false;
+                    break;
+                case 'KeyA':
+                    keyA = false;
+                    break;
+                case 'KeyD':
+                    keyD = false;
+                    break;
+                default:
+            }
+        });
+    let mouseDownX = 0.0;
+    let mouseDownY = 0.0;
+    clickedMouseButton = false;
+
+    canvas.addEventListener('mousedown', function (e) {
+        if (typeof e === 'object') {
+            switch (e.button) {
+                case 0:
+                    clickedMouseButton = true;
+                    mouseDownX = e.clientX;
+                    mouseDownY = e.clientY;
+                    break;
+            }
+        }
+    });
+
+    canvas.addEventListener('mouseup', function (e) {
+        if (typeof e === 'object') {
+            switch (e.button) {
+                case 0:
+                    clickedMouseButton = false;
+                    break;
+            }
+        }
+    });
+    let deltaMouse = { x: 0, y: 0 };
+    canvas.addEventListener('mousemove', mouseButtonUp);
+    function mouseButtonUp(e) {
+        if (clickedMouseButton === true) {
+            deltaMouse.x = e.clientX - mouseDownX;
+            mouseDownX = e.clientX;
+            deltaMouse.y = mouseDownY - e.clientY;
+            mouseDownY = e.clientY;
+        }
+    }
+    let deltaPosition = { forward: 0, left: 0 };
+    let inputData = { "deltaPosition": deltaPosition, "deltaMouse": deltaMouse }
+
+    let lastTime = 0;
+    let delta = 0;
+    return function inputLogic() {
+
+        if (lastTime <= 0) {
+            lastTime = Date.now();
+            delta = 0;
+        }
+        else {
+            delta = Date.now() - lastTime;
+        }
+
+        if (keyW === true) {
+            deltaPosition.forward = delta * 0.00005;
+        }
+        else if (keyS === true) {
+            deltaPosition.forward = -delta * 0.00005;
+        }
+        else {
+            deltaPosition.forward = 0;
+        }
+
+        if (keyD === true) {
+            deltaPosition.left = delta * 0.00005;
+        }
+        else if (keyA === true) {
+            deltaPosition.left = -delta * 0.00005;
+        }
+        else {
+            deltaPosition.left = 0;
+        }
+
+
+        return inputData;
+    };
 }
 async function loadGLTF(gl, path, gltfObj) {
     console.log(gltfObj);
@@ -237,7 +437,7 @@ async function loadGLTF(gl, path, gltfObj) {
 
         const glElementArray = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glElementArray);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indicesBuffer), gl.STATIC_DRAW,0,drawble.count);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indicesBuffer), gl.STATIC_DRAW, 0, drawble.count);
 
         //materials
         const material = gltfObj.materials[primitive.material];
@@ -297,14 +497,16 @@ async function loadGLTF(gl, path, gltfObj) {
     }
     gl.deleteShader(vertexShader);
     gl.deleteShader(fragmentShader);
-    return function () {
+
+    const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
+    return function (mvp) {
         drawbles.map((drawble) => {
 
             gl.useProgram(program);
 
+            gl.uniformMatrix4fv(mvpUniformLocation, false, mvp);
             gl.bindVertexArray(drawble.vao);
 
-            
             gl.drawElements(gl.TRIANGLES, drawble.count, gl.UNSIGNED_SHORT, 0);
         });
     };
@@ -319,16 +521,27 @@ async function main() {
 
     const gl = canvasElement.getContext('webgl2');
 
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
     const loadingMessageElement = document.getElementById("loading-message");
     if (!gl) {
         loadingMessageElement.innerHTML = "Your device does not support WebGL 2!";
         return;
     }
     else {
+
+        //input logic
+        const updateOnInput = initInputLogic(canvasElement)
+        const getViewProjectionMatrix = initViewProjectionMatrix();
+
         let draw = await loadSponza(gl);
         loadingMessageElement.style.display = "none";
         const loop = () => {
-            draw();
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            let inputData = updateOnInput();
+            let mvp = getViewProjectionMatrix(inputData);
+
+            draw(mvp);
             window.requestAnimationFrame(loop);
         }
         window.requestAnimationFrame(loop)
