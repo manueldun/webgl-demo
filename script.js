@@ -44,10 +44,7 @@ function getBinaryFile(path, fileName) {
 }
 
 function initViewProjectionMatrix() {
-    //inputData.deltaPosition.forward
-    //inputData.deltaPosition.left
-    //inputData.deltaMouse.x
-    //inputData.deltaMouse.y
+    
     this.forwardDirection = glMatrix.vec4.fromValues(0.0, 0.0, -1.0);
 
     this.position = glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
@@ -525,7 +522,7 @@ async function main() {
 
     const gl = canvasElement.getContext('webgl2');
 
-    
+    gl.enable(gl.DEPTH_TEST);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
