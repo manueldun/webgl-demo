@@ -460,7 +460,6 @@ async function loadGLTF(gl, path, gltfObj) {
         gl.generateMipmap(gl.TEXTURE_2D);
         gl.activeTexture(gl.TEXTURE0 + 0);
         gl.bindVertexArray(null);
-
         return drawble;
 
     });
@@ -519,7 +518,14 @@ async function loadSponza(gl) {
 async function main() {
     const canvasElement = document.getElementsByTagName("canvas")[0];
 
+    canvasElement.width = 1280;
+    canvasElement.style.width = 1280;
+    canvasElement.height = 720;
+    canvasElement.style.height = 720;
+
     const gl = canvasElement.getContext('webgl2');
+
+    
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
