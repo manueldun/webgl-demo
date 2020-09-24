@@ -44,7 +44,7 @@ function getBinaryFile(path, fileName) {
 }
 
 function initViewProjectionMatrix() {
-    
+
     this.forwardDirection = glMatrix.vec4.fromValues(0.0, 0.0, -1.0);
 
     this.position = glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
@@ -197,9 +197,9 @@ function initInputLogic(canvas) {
     canvas.addEventListener('mousemove', mouseButtonUp);
     function mouseButtonUp(e) {
         if (clickedMouseButton === true) {
-            deltaMouse.x = e.clientX - mouseDownX;
+            deltaMouse.x = (e.clientX - mouseDownX)*0.1;
             mouseDownX = e.clientX;
-            deltaMouse.y = mouseDownY - e.clientY;
+            deltaMouse.y = (mouseDownY - e.clientY)*0.1;
             mouseDownY = e.clientY;
         }
     }
@@ -216,29 +216,29 @@ function initInputLogic(canvas) {
         }
         else {
             delta = Date.now() - lastTime;
+            lastTime = Date.now();
+            
         }
 
         if (keyW === true) {
-            deltaPosition.forward = delta * 0.00005;
+            deltaPosition.forward = delta;
         }
         else if (keyS === true) {
-            deltaPosition.forward = -delta * 0.00005;
+            deltaPosition.forward = -delta;
         }
         else {
             deltaPosition.forward = 0;
         }
 
         if (keyD === true) {
-            deltaPosition.left = delta * 0.00005;
+            deltaPosition.left = delta;
         }
         else if (keyA === true) {
-            deltaPosition.left = -delta * 0.00005;
+            deltaPosition.left = -delta;
         }
         else {
             deltaPosition.left = 0;
         }
-
-
         return inputData;
     };
 }
@@ -260,10 +260,34 @@ async function loadGLTF(gl, path, gltfObj) {
     });
 
 
+    let glColorTexturePromises = gltfObj.images.map(async (image)=>
+    {
+         //materials
+         const imageURI = image.uri;
+ 
+         const colorImagePromise = new Promise((resolve, reject) => {
+             let img = new Image()
+             img.onload = () => resolve(img);
+             img.onerror = reject;
+             img.src = path + imageURI;
+         });
+ 
+         const glTexture = gl.createTexture();
+         gl.bindTexture(gl.TEXTURE_2D, glTexture);
+ 
+         const colorImage = await colorImagePromise;
+         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, colorImage);
+         gl.generateMipmap(gl.TEXTURE_2D);
+         gl.activeTexture(gl.TEXTURE0 + 0);
+         glTexture.uri=imageURI;
+        return glTexture;
+    });
 
+    let glColorTextures = await Promise.all(glColorTexturePromises);
 
+    let drawblesPromises = gltfObj.meshes[0].primitives.slice(0, 1);
 
-    let drawblesPromises = gltfObj.meshes[0].primitives.map(async (primitive) => {
+    drawblesPromises = drawblesPromises.map(async (primitive) => {
 
         const positionAttributeLocation = 0;
         const normalAttributeLocation = 1;
@@ -309,7 +333,7 @@ async function loadGLTF(gl, path, gltfObj) {
         }
         let type = gl.FLOAT;   // the data is 32bit floats
         let normalize = false; // don't normalize the data
-        let stride = size * Float32Array.BYTES_PER_ELEMENT;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+        let stride = positionAccessor.byteOffset;        // 0 = move forward size * sizeof(type) each iteration to get the next position
         let offset = positionBufferView.byteOffset;        // start at the beginning of the buffer
         gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset);
 
@@ -344,7 +368,7 @@ async function loadGLTF(gl, path, gltfObj) {
         }
         type = gl.FLOAT;   // the data is 32bit floats
         normalize = false; // don't normalize the data
-        stride = size * Float32Array.BYTES_PER_ELEMENT;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+        stride = texCoordAccessor.byteOffset;        // 0 = move forward size * sizeof(type) each iteration to get the next position
         offset = texCoordBufferView.byteOffset;        // start at the beginning of the buffer
         gl.vertexAttribPointer(texCoordAttributeLocation, size, type, normalize, stride, offset);
 
@@ -440,22 +464,8 @@ async function loadGLTF(gl, path, gltfObj) {
         const material = gltfObj.materials[primitive.material];
         const baseColorTextureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
         const textureIndex = gltfObj.textures[baseColorTextureIndex].source;
-        const imageURI = gltfObj.images[textureIndex].uri;
+        drawble.colorTexture = glColorTextures[textureIndex];
 
-        const colorImagePromise = new Promise((resolve, reject) => {
-            let img = new Image()
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = path + imageURI;
-        });
-
-        const glTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, glTexture);
-
-        const colorImage = await colorImagePromise;
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, colorImage);
-        gl.generateMipmap(gl.TEXTURE_2D);
-        gl.activeTexture(gl.TEXTURE0 + 0);
         gl.bindVertexArray(null);
         return drawble;
 
@@ -495,21 +505,31 @@ async function loadGLTF(gl, path, gltfObj) {
     gl.deleteShader(fragmentShader);
 
     const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
+    //const colorTextureUniform = gl.getUniformLocation(program, "color_sampler");
+
     return function (mvp) {
         drawbles.map((drawble) => {
 
+
+            gl.bindTexture(gl.TEXTURE_2D,drawble.colorTexture);
             gl.useProgram(program);
 
             gl.uniformMatrix4fv(mvpUniformLocation, false, mvp);
+
+
+
             gl.bindVertexArray(drawble.vao);
 
-            gl.drawElements(gl.TRIANGLES, drawble.count, gl.UNSIGNED_SHORT, 0);
+            gl.activeTexture(gl.TEXTURE0)
+            //gl.uniform1i(colorTextureUniform, 0);
+
+            gl.drawElements(gl.TRIANGLES, drawble.count, drawble.indiceType, 0);
         });
     };
 }
 async function loadSponza(gl) {
-    const objFile = JSON.parse(await getStringFile("cube/", "cube.gltf"));
-    return loadGLTF(gl, "/cube/", objFile);
+    const objFile = JSON.parse(await getStringFile("sponza/", "sponza.gltf"));
+    return loadGLTF(gl, "/sponza/", objFile);
 }
 
 async function main() {
@@ -523,6 +543,7 @@ async function main() {
     const gl = canvasElement.getContext('webgl2');
 
     gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
