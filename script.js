@@ -259,10 +259,9 @@ async function loadGLTF(gl, path, gltfObj) {
         return glBuffer;
     });
 
-
-    let glColorTexturePromises = gltfObj.images.map(async (image)=>
+    let glColorTexturePromises = gltfObj.images.slice(0,2);
+    glColorTexturePromises = glColorTexturePromises.map(async (image)=>
     {
-         //materials
          const imageURI = image.uri;
  
          const colorImagePromise = new Promise((resolve, reject) => {
@@ -278,11 +277,9 @@ async function loadGLTF(gl, path, gltfObj) {
          const colorImage = await colorImagePromise;
          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, colorImage);
          gl.generateMipmap(gl.TEXTURE_2D);
-         gl.activeTexture(gl.TEXTURE0 + 0);
          glTexture.uri=imageURI;
         return glTexture;
     });
-
     let glColorTextures = await Promise.all(glColorTexturePromises);
 
     let drawblesPromises = gltfObj.meshes[0].primitives.slice(0, 1);
@@ -374,7 +371,7 @@ async function loadGLTF(gl, path, gltfObj) {
 
 
         //normal Attribute
-        gl.enableVertexAttribArray(texCoordAttributeLocation);
+        //gl.enableVertexAttribArray(normalAttributeLocation);
         const normalAccessorIndex = primitive.attributes.NORMAL;
         const normalAccessor = gltfObj.accessors[normalAccessorIndex];
         const normalBufferviewIndex = normalAccessor.bufferView;
@@ -402,13 +399,13 @@ async function loadGLTF(gl, path, gltfObj) {
         }
         type = gl.FLOAT;   // the data is 32bit floats
         normalize = false; // don't normalize the data
-        stride = size * Float32Array.BYTES_PER_ELEMENT;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+        stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
         offset = normalBufferView.byteOffset;        // start at the beginning of the buffer
         gl.vertexAttribPointer(normalAttributeLocation, size, type, normalize, stride, offset);
 
 
         //tangent Attribute
-        gl.enableVertexAttribArray(texCoordAttributeLocation);
+        //gl.enableVertexAttribArray(tangentAttributeLocation);
         const tangentAccessorIndex = primitive.attributes.TANGENT;
         if (tangentAccessorIndex !== undefined) {
 
@@ -438,7 +435,7 @@ async function loadGLTF(gl, path, gltfObj) {
             }
             type = gl.FLOAT;   // the data is 32bit floats
             normalize = false; // don't normalize the data
-            stride = size * Float32Array.BYTES_PER_ELEMENT;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+            stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
             offset = tangentBufferView.byteOffset;        // start at the beginning of the buffer
             gl.vertexAttribPointer(tangentAttributeLocation, size, type, normalize, stride, offset);
         }
@@ -465,6 +462,7 @@ async function loadGLTF(gl, path, gltfObj) {
         const baseColorTextureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
         const textureIndex = gltfObj.textures[baseColorTextureIndex].source;
         drawble.colorTexture = glColorTextures[textureIndex];
+        
 
         gl.bindVertexArray(null);
         return drawble;
@@ -505,23 +503,18 @@ async function loadGLTF(gl, path, gltfObj) {
     gl.deleteShader(fragmentShader);
 
     const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
-    //const colorTextureUniform = gl.getUniformLocation(program, "color_sampler");
 
     return function (mvp) {
         drawbles.map((drawble) => {
 
 
             gl.bindTexture(gl.TEXTURE_2D,drawble.colorTexture);
+            gl.activeTexture(gl.TEXTURE0)
             gl.useProgram(program);
 
             gl.uniformMatrix4fv(mvpUniformLocation, false, mvp);
 
-
-
             gl.bindVertexArray(drawble.vao);
-
-            gl.activeTexture(gl.TEXTURE0)
-            //gl.uniform1i(colorTextureUniform, 0);
 
             gl.drawElements(gl.TRIANGLES, drawble.count, drawble.indiceType, 0);
         });
@@ -543,9 +536,9 @@ async function main() {
     const gl = canvasElement.getContext('webgl2');
 
     gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+    //gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);
 
     const loadingMessageElement = document.getElementById("loading-message");
     if (!gl) {
