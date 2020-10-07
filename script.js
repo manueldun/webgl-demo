@@ -108,7 +108,7 @@ function initViewProjectionMatrix() {
 
 
         let projectionMatrix = glMatrix.mat4.create();
-        glMatrix.mat4.perspective(projectionMatrix, 35 * (180 / Math.PI), 1280 / 720, 0.1, 1000 0);
+        glMatrix.mat4.perspective(projectionMatrix, 35 * (180 / Math.PI), 1280 / 720, 0.1, 10000);
 
 
         let mvpMatrix = glMatrix.mat4.create();
