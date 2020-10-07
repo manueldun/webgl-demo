@@ -108,7 +108,7 @@ function initViewProjectionMatrix() {
 
 
         let projectionMatrix = glMatrix.mat4.create();
-        glMatrix.mat4.perspective(projectionMatrix, 35 * (180 / Math.PI), 1280 / 720, 0.1, 1000);
+        glMatrix.mat4.perspective(projectionMatrix, 35 * (180 / Math.PI), 1280 / 720, 0.1, 1000 0);
 
 
         let mvpMatrix = glMatrix.mat4.create();
@@ -197,9 +197,9 @@ function initInputLogic(canvas) {
     canvas.addEventListener('mousemove', mouseButtonUp);
     function mouseButtonUp(e) {
         if (clickedMouseButton === true) {
-            deltaMouse.x = (e.clientX - mouseDownX)*0.1;
+            deltaMouse.x = (e.clientX - mouseDownX) * 0.1;
             mouseDownX = e.clientX;
-            deltaMouse.y = (mouseDownY - e.clientY)*0.1;
+            deltaMouse.y = (mouseDownY - e.clientY) * 0.1;
             mouseDownY = e.clientY;
         }
     }
@@ -217,7 +217,7 @@ function initInputLogic(canvas) {
         else {
             delta = Date.now() - lastTime;
             lastTime = Date.now();
-            
+
         }
 
         if (keyW === true) {
@@ -249,42 +249,47 @@ async function loadGLTF(gl, path, gltfObj) {
     });
 
 
-    const binBuffers = await Promise.all(binFileBuffersPromises);
+    const rawBufferFiles = await Promise.all(binFileBuffersPromises);
 
-    const glBuffers = binBuffers.map((binBuffer) => {
-        const glBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, binBuffer, gl.STATIC_DRAW);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        return glBuffer;
+    const bufferSlices = gltfObj.bufferViews.map((bufferView) => {
+
+        let rawBuffferFile = rawBufferFiles[bufferView.buffer];
+        let bufferSlice = rawBuffferFile.slice(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength);
+
+        return bufferSlice;
     });
 
-    let glColorTexturePromises = gltfObj.images.slice(0,2);
-    glColorTexturePromises = glColorTexturePromises.map(async (image)=>
-    {
-         const imageURI = image.uri;
- 
-         const colorImagePromise = new Promise((resolve, reject) => {
-             let img = new Image()
-             img.onload = () => resolve(img);
-             img.onerror = reject;
-             img.src = path + imageURI;
-         });
- 
-         const glTexture = gl.createTexture();
-         gl.bindTexture(gl.TEXTURE_2D, glTexture);
- 
-         const colorImage = await colorImagePromise;
-         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, colorImage);
-         gl.generateMipmap(gl.TEXTURE_2D);
-         glTexture.uri=imageURI;
+
+    let glTextures = gltfObj.images.map(async (image) => {
+
+
+        const imageURI = image.uri;
+
+        const colorImagePromise = new Promise((resolve, reject) => {
+            let img = new Image()
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = path + imageURI;
+        });
+
+        const colorImage = await colorImagePromise;
+        const glTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, glTexture);
+
+        if (image.mimeType === "image/png") {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, colorImage);
+        }
+        else if (image.mimeType === "image/jpeg") {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, colorImage);
+        }
+        gl.generateMipmap(gl.TEXTURE_2D);
+        glTexture.uri = imageURI;
+        glTexture.colorImage = colorImage;
         return glTexture;
     });
-    let glColorTextures = await Promise.all(glColorTexturePromises);
+    glTextures = await Promise.all(glTextures);
 
-    let drawblesPromises = gltfObj.meshes[0].primitives.slice(0, 1);
-
-    drawblesPromises = drawblesPromises.map(async (primitive) => {
+    let drawblesPromises = gltfObj.meshes[0].primitives.map(async (primitive) => {
 
         const positionAttributeLocation = 0;
         const normalAttributeLocation = 1;
@@ -302,12 +307,13 @@ async function loadGLTF(gl, path, gltfObj) {
         const positionAccessorIndex = primitive.attributes.POSITION;
         const positionAccessor = gltfObj.accessors[positionAccessorIndex];
         const positionBufferviewIndex = positionAccessor.bufferView;
-        const positionBufferView = gltfObj.bufferViews[positionBufferviewIndex];
-        const positionBufferIndex = positionBufferView.buffer;
+        const positionAttributeBuffer = bufferSlices[positionBufferviewIndex];
 
-        const attributeBuffer = glBuffers[positionBufferIndex];
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, attributeBuffer);
+        const glPositionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, glPositionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positionAttributeBuffer, gl.STATIC_DRAW);
+
 
         let size;//components per iteration
         switch (positionAccessor.type) {
@@ -330,8 +336,8 @@ async function loadGLTF(gl, path, gltfObj) {
         }
         let type = gl.FLOAT;   // the data is 32bit floats
         let normalize = false; // don't normalize the data
-        let stride = positionAccessor.byteOffset;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-        let offset = positionBufferView.byteOffset;        // start at the beginning of the buffer
+        let stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+        let offset = 0;        // start at the beginning of the buffer
         gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset);
 
 
@@ -341,10 +347,14 @@ async function loadGLTF(gl, path, gltfObj) {
         const texCoordAccessorIndex = primitive.attributes.TEXCOORD_0;
         const texCoordAccessor = gltfObj.accessors[texCoordAccessorIndex];
         const texCoordBufferViewIndex = texCoordAccessor.bufferView;
-        const texCoordBufferView = gltfObj.bufferViews[texCoordBufferViewIndex];
-        const texCoordBufferIndex = texCoordBufferView.buffer;
-        const texCoordBuffer = glBuffers[texCoordBufferIndex];
+        const texCoordAttributeBuffer = bufferSlices[texCoordBufferViewIndex];
 
+
+        const glTexCoordBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, glTexCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, texCoordAttributeBuffer, gl.STATIC_DRAW);
+
+        
         switch (texCoordAccessor.type) {
             case "SCALAR":
                 size = 1;
@@ -365,8 +375,8 @@ async function loadGLTF(gl, path, gltfObj) {
         }
         type = gl.FLOAT;   // the data is 32bit floats
         normalize = false; // don't normalize the data
-        stride = texCoordAccessor.byteOffset;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-        offset = texCoordBufferView.byteOffset;        // start at the beginning of the buffer
+        stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+        offset = 0;        // start at the beginning of the buffer
         gl.vertexAttribPointer(texCoordAttributeLocation, size, type, normalize, stride, offset);
 
 
@@ -376,8 +386,8 @@ async function loadGLTF(gl, path, gltfObj) {
         const normalAccessor = gltfObj.accessors[normalAccessorIndex];
         const normalBufferviewIndex = normalAccessor.bufferView;
         const normalBufferView = gltfObj.bufferViews[normalBufferviewIndex];
-        const normalBufferIndex = normalBufferView.buffer;
-        const normalBuffer = glBuffers[normalBufferIndex];
+        const normalAttributeBuffer = bufferSlices[normalBufferView];
+        //create normal buffer
 
         switch (normalAccessor.type) {
             case "SCALAR":
@@ -412,8 +422,9 @@ async function loadGLTF(gl, path, gltfObj) {
             const tangentAccessor = gltfObj.accessors[tangentAccessorIndex];
             const tangentBufferViewIndex = tangentAccessor.bufferView;
             const tangentBufferView = gltfObj.bufferViews[tangentBufferViewIndex];
-            const tangentBufferIndex = tangentBufferView.buffer;
-            const tangentBuffer = glBuffers[tangentBufferIndex];
+            const tangentAttributeBuffer = bufferSlices[normalBufferView];
+
+            //create tangentBuffer
 
             switch (tangentAccessor.type) {
                 case "SCALAR":
@@ -440,35 +451,35 @@ async function loadGLTF(gl, path, gltfObj) {
             gl.vertexAttribPointer(tangentAttributeLocation, size, type, normalize, stride, offset);
         }
         //index Attribute
-        const indicesAccessor = gltfObj.accessors[primitive.indices];
-        const indicesBufferviewIndex = indicesAccessor.bufferView;
-        const indicesBufferView = gltfObj.bufferViews[indicesBufferviewIndex];
-        const indicesBufferIndex = indicesBufferView.buffer;
-        const indicesBuffer = binBuffers[indicesBufferIndex];
 
-        drawble.count = indicesAccessor.count;
-        drawble.indiceType = indicesAccessor.componentType;
+
+        const indexAccessorIndex = primitive.indices;
+        const indexAccessor = gltfObj.accessors[indexAccessorIndex];
+        const indexBufferViewIndex = indexAccessor.bufferView;
+        const indexAttributeBuffer = bufferSlices[indexBufferViewIndex];
+
+        const glElementArray = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glElementArray);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexAttributeBuffer, gl.STATIC_DRAW);
+
+
+        drawble.count = indexAccessor.count;
+        drawble.indiceType = indexAccessor.componentType;
         drawble.positionAttributeLocation = positionAttributeLocation;
         drawble.normalAttributeLocation = normalAttributeLocation;
         drawble.texCoordAttributeLocation = texCoordAttributeLocation;
         drawble.tangentAttributeLocation = tangentAttributeLocation;
 
-        const glElementArray = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glElementArray);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indicesBuffer), gl.STATIC_DRAW, 0, drawble.count);
+        const materialIndex = primitive.material;
+        const material = gltfObj.materials[materialIndex];
+        const colorTextureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
+        const imageIndex = gltfObj.textures[colorTextureIndex].source;
 
-        //materials
-        const material = gltfObj.materials[primitive.material];
-        const baseColorTextureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
-        const textureIndex = gltfObj.textures[baseColorTextureIndex].source;
-        drawble.colorTexture = glColorTextures[textureIndex];
-        
+        drawble.glTexture = glTextures[imageIndex];
 
-        gl.bindVertexArray(null);
         return drawble;
 
     });
-
 
     const drawbles = await Promise.all(drawblesPromises);
     const vertexShader = gl.createShader(gl.VERTEX_SHADER);
@@ -503,14 +514,17 @@ async function loadGLTF(gl, path, gltfObj) {
     gl.deleteShader(fragmentShader);
 
     const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
+    //const samplerUniformLocation = gl.getUniformLocation(program, "color_sampler");
+    gl.useProgram(program);
+
 
     return function (mvp) {
         drawbles.map((drawble) => {
 
 
-            gl.bindTexture(gl.TEXTURE_2D,drawble.colorTexture);
-            gl.activeTexture(gl.TEXTURE0)
-            gl.useProgram(program);
+            gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
+
+            //gl.useProgram(program);
 
             gl.uniformMatrix4fv(mvpUniformLocation, false, mvp);
 
@@ -536,9 +550,9 @@ async function main() {
     const gl = canvasElement.getContext('webgl2');
 
     gl.enable(gl.DEPTH_TEST);
-    //gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+    gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
 
-    gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    gl.clearColor(0.0, 0.0, 1.0, 1.0);
 
     const loadingMessageElement = document.getElementById("loading-message");
     if (!gl) {

@@ -11,5 +11,9 @@ void main()
 {  
      
     out_color = texture(color_sampler, var_texCoord);
+    if(out_color.a<0.9)
+    {
+        discard;
+    }
 
 }
