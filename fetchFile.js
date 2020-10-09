@@ -1,7 +1,7 @@
 function getStringFile(path, fileName) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('GET', path + fileName, true);
+        xhr.open('GET', window.location.href + path + fileName, true);
         xhr.onload = function () {
             if (this.status >= 200 && this.status < 300) {
                 resolve(xhr.response);
@@ -24,7 +24,7 @@ function getStringFile(path, fileName) {
 function getBinaryFile(path, fileName) {
     return new Promise((resolve, reject) => {
         var oReq = new XMLHttpRequest();
-        oReq.open("GET", path + fileName, true);
+        oReq.open("GET", window.location.href + path + fileName, true);
         oReq.responseType = "arraybuffer";
 
         oReq.onload = function (oEvent) {
