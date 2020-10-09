@@ -1,5 +1,3 @@
-
-
 async function main() {
     const canvasElement = document.getElementsByTagName("canvas")[0];
 
@@ -26,15 +24,15 @@ async function main() {
         const updateOnInput = initInputLogic(canvasElement)
         const getViewProjectionMatrix = initViewProjectionMatrix();
 
-        let drawwable = await loadSponza(gl);
+        let drawable = await loadSponza(gl);
 
         loadingMessageElement.style.display = "none";
         const loop = () => {
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             let inputData = updateOnInput();
-            let mvp = getViewProjectionMatrix(inputData, drawwable.modelMatrix);
+            let mvp = getViewProjectionMatrix(inputData, drawable.modelMatrix);
 
-            drawwable.draw(mvp);
+            drawable.draw(mvp);
             window.requestAnimationFrame(loop);
         }
         window.requestAnimationFrame(loop)
