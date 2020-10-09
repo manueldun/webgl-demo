@@ -36,7 +36,7 @@ async function loadGLTF(gl, path, gltfObj) {
             let img = new Image()
             img.onload = () => resolve(img);
             img.onerror = reject;
-            img.src = path + imageURI;
+            img.src = window.location.href + path + imageURI;
         });
 
         const colorImage = await colorImagePromise;
