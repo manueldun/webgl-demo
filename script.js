@@ -6,7 +6,7 @@ async function main() {
     canvasElement.height = 720;
     canvasElement.style.height = 720;
 
-    const gl = canvasElement.getContext('webgl2');
+    const gl = canvasElement.getContext('webgl2', {antialias : false});
 
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
