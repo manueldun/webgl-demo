@@ -10,9 +10,19 @@ function getModelMatrix(gltfObj) {
 }
 
 async function loadGLTF(gl, path, gltfObj) {
+
+    const loadingMessageElement = document.getElementById("loading-message");
+    let loadingModelProgress = 0;
+    let totalTextureProgress = 0;
     console.log(gltfObj);
     let binFileBuffersPromises = gltfObj.buffers.map((buffer) => {
-        return getBinaryFile(path, buffer.uri);
+        return getBinaryFile(path, buffer.uri, (e) => {
+            if (e.lengthComputable)
+                loadingModelProgress = ((e.loaded / e.total) * 100).toFixed(2);
+
+            loadingMessageElement.innerHTML = "Model: " + loadingModelProgress + " %" +
+                "\nTextures: " + totalTextureProgress + "%";
+        });
     });
 
 
@@ -29,18 +39,25 @@ async function loadGLTF(gl, path, gltfObj) {
 
     let glTextures = gltfObj.images.map(async (image) => {
 
-
+        image.loadingProgress = 0;
         const imageURI = image.uri;
 
-        const colorImagePromise = new Promise((resolve, reject) => {
-            let img = new Image()
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = window.location.href + path + imageURI;
+        const colorImagePromise = loadImage(path, imageURI, (e) => {
+            if (e.lengthComputable)
+                image.loadingProgress = parseInt((e.loaded / e.total) * 100);
+
+            totalTextureProgress = gltfObj.images.reduce((acumulator, current) => {
+                return acumulator + current.loadingProgress;
+            }, 0);
+
+            loadingMessageElement.innerHTML = "Model: " + loadingModelProgress + " %" +
+                "Textures: " + (totalTextureProgress/gltfObj.images.length).toFixed(2) + "%";
+
         });
 
         const colorImage = await colorImagePromise;
         const glTexture = gl.createTexture();
+        glTexture.loadingTexturesProgress;
         gl.bindTexture(gl.TEXTURE_2D, glTexture);
 
         if (image.mimeType === "image/png") {
@@ -148,14 +165,17 @@ async function loadGLTF(gl, path, gltfObj) {
 
 
         //normal Attribute
-        //gl.enableVertexAttribArray(normalAttributeLocation);
+        gl.enableVertexAttribArray(normalAttributeLocation);
         const normalAccessorIndex = primitive.attributes.NORMAL;
         const normalAccessor = gltfObj.accessors[normalAccessorIndex];
-        const normalBufferviewIndex = normalAccessor.bufferView;
-        const normalBufferView = gltfObj.bufferViews[normalBufferviewIndex];
-        const normalAttributeBuffer = bufferSlices[normalBufferView];
+        const normalBufferViewIndex = normalAccessor.bufferView;
+        const normalAttributeBuffer = bufferSlices[normalBufferViewIndex];
         //create normal buffer
 
+
+        const glNormalBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, glNormalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, normalAttributeBuffer, gl.STATIC_DRAW);
         switch (normalAccessor.type) {
             case "SCALAR":
                 size = 1;
@@ -177,19 +197,19 @@ async function loadGLTF(gl, path, gltfObj) {
         type = gl.FLOAT;   // the data is 32bit floats
         normalize = false; // don't normalize the data
         stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-        offset = normalBufferView.byteOffset;        // start at the beginning of the buffer
+        offset = 0;        // start at the beginning of the buffer
         gl.vertexAttribPointer(normalAttributeLocation, size, type, normalize, stride, offset);
 
 
         //tangent Attribute
         //gl.enableVertexAttribArray(tangentAttributeLocation);
         const tangentAccessorIndex = primitive.attributes.TANGENT;
-        if (tangentAccessorIndex !== undefined) {
+        if (false) {
 
             const tangentAccessor = gltfObj.accessors[tangentAccessorIndex];
             const tangentBufferViewIndex = tangentAccessor.bufferView;
             const tangentBufferView = gltfObj.bufferViews[tangentBufferViewIndex];
-            const tangentAttributeBuffer = bufferSlices[normalBufferView];
+            const tangentAttributeBuffer = bufferSlices[tangentBufferView];
 
             //create tangentBuffer
 
