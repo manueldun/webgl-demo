@@ -22,7 +22,7 @@ async function main() {
 
         //input logic
         const updateOnInput = initInputLogic(canvasElement)
-        const getViewProjectionMatrix = initViewProjectionMatrix();
+        const getUniformMatrices = initViewProjectionMatrix();
 
         let drawable = await loadSponza(gl);
 
@@ -30,9 +30,9 @@ async function main() {
         const loop = () => {
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             let inputData = updateOnInput();
-            let mvp = getViewProjectionMatrix(inputData, drawable.modelMatrix);
+            let uniformMatrices = getUniformMatrices(inputData, drawable.modelMatrix);
 
-            drawable.draw(mvp);
+            drawable.draw(uniformMatrices);
             window.requestAnimationFrame(loop);
         }
         window.requestAnimationFrame(loop)

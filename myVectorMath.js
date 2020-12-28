@@ -76,7 +76,7 @@ function initViewProjectionMatrix() {
         if (this.position[0] === NaN) {
             console.log(delta);
         }
-        return mvpMatrix;
+        return {mvpMatrix:mvpMatrix,rotationMatrix:rotationMatrix};
     }
 
 }

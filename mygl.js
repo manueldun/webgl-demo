@@ -301,21 +301,22 @@ async function loadGLTF(gl, path, gltfObj) {
     gl.deleteShader(fragmentShader);
 
     const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
+    const rotationMatrixUniform = gl.getUniformLocation(program, "rotationMatrix");
     //const samplerUniformLocation = gl.getUniformLocation(program, "color_sampler");
     gl.useProgram(program);
 
 
     return {
         modelMatrix: getModelMatrix(gltfObj),
-        draw: function (mvp) {
+        draw: function (uniformMatrices) {
             drawbles.map((drawble) => {
 
 
                 gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
 
-                //gl.useProgram(program);
 
-                gl.uniformMatrix4fv(mvpUniformLocation, false, mvp);
+                gl.uniformMatrix4fv(rotationMatrixUniform, false, uniformMatrices.rotationMatrix);
+                gl.uniformMatrix4fv(mvpUniformLocation, false, uniformMatrices.mvpMatrix);
 
                 gl.bindVertexArray(drawble.vao);
 
