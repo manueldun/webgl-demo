@@ -26,16 +26,7 @@ async function loadGLTF(gl, path, gltfObj) {
     });
 
 
-    const rawBufferFiles = await Promise.all(binFileBuffersPromises);
-
-    const bufferSlices = gltfObj.bufferViews.map((bufferView) => {
-
-        let rawBuffferFile = rawBufferFiles[bufferView.buffer];
-        let bufferSlice = rawBuffferFile.slice(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength);
-
-        return bufferSlice;
-    });
-
+    
 
     let glTextures = gltfObj.images.map(async (image) => {
 
@@ -72,6 +63,16 @@ async function loadGLTF(gl, path, gltfObj) {
         return glTexture;
     });
     glTextures = await Promise.all(glTextures);
+    const rawBufferFiles = await Promise.all(binFileBuffersPromises);
+
+    const bufferSlices = gltfObj.bufferViews.map((bufferView) => {
+
+        let rawBuffferFile = rawBufferFiles[bufferView.buffer];
+        let bufferSlice = rawBuffferFile.slice(bufferView.byteOffset, bufferView.byteOffset + bufferView.byteLength);
+
+        return bufferSlice;
+    });
+
 
     let drawblesPromises = gltfObj.meshes[0].primitives.map(async (primitive) => {
 
