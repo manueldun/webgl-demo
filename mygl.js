@@ -304,15 +304,14 @@ async function loadGLTF(gl, path, gltfObj) {
     const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
     const rotationMatrixUniform = gl.getUniformLocation(program, "rotationMatrix");
     //const samplerUniformLocation = gl.getUniformLocation(program, "color_sampler");
-    gl.useProgram(program);
+
 
 
     return {
         modelMatrix: getModelMatrix(gltfObj),
         draw: function (uniformMatrices) {
             drawbles.map((drawble) => {
-
-
+                gl.useProgram(program);
                 gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
 
 

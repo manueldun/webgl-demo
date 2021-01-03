@@ -24,15 +24,17 @@ async function main() {
         const updateOnInput = initInputLogic(canvasElement)
         const getUniformMatrices = initViewProjectionMatrix();
 
-        let drawable = await loadSponza(gl);
-
+        let sponzaDrawable = await loadSponza(gl);
+        let cubeDrawble = getDrawbleShadowMapCube(gl);
         loadingMessageElement.style.display = "none";
         const loop = () => {
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             let inputData = updateOnInput();
-            let uniformMatrices = getUniformMatrices(inputData, drawable.modelMatrix);
+            let uniformMatrices = getUniformMatrices(inputData, sponzaDrawable.modelMatrix);
 
-            drawable.draw(uniformMatrices);
+            sponzaDrawable.draw(uniformMatrices);
+            cubeDrawble.draw(uniformMatrices)
+
             window.requestAnimationFrame(loop);
         }
         window.requestAnimationFrame(loop)
