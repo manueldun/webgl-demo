@@ -80,3 +80,25 @@ function initViewProjectionMatrix() {
     }
 
 }
+function getRotationMatrixFromPolarAngles(verticalAngle,horizontalAngle)
+{
+    let verticalRadianAngle=glMatrix.toRadian(verticalAngle);
+    let horizontalRadianAngle=glMatrix.toRadian(horizontalAngle);
+    const xCoordYaxis= Math.sin(verticalRadianAngle)*Math.cos(horizontalRadianAngle);
+    const yCoordYaxis= Math.cos(verticalRadianAngle);
+    const zCoordYaxis= Math.sin(verticalRadianAngle)*Math.sin(horizontalRadianAngle);
+    const Yaxis = [xCoordYaxis,yCoordYaxis,zCoordYaxis];
+    const xCoordZaxis= Math.sin(verticalRadianAngle+(90)*(Math.PI/180))*Math.cos(horizontalRadianAngle);
+    const yCoordZaxis= Math.cos(verticalRadianAngle(90)*(Math.PI/180));
+    const zCoordZaxis= Math.sin(verticalRadianAngle+(90)*(Math.PI/180))*Math.sin(horizontalRadianAngle);
+    const Zaxis =[xCoordZaxis,yCoordZaxis,zCoordZaxis];
+    const xCoordXaxis= Math.sin(verticalRadianAngle+(90)*(Math.PI/180))*Math.cos(horizontalRadianAngle+(90)*(Math.PI/180));
+    const yCoordXaxis= Math.cos(verticalRadianAngle(90)*(Math.PI/180));
+    const zCoordXaxis= Math.sin(verticalRadianAngle+(90)*(Math.PI/180))*Math.sin(horizontalRadianAngle+(90)*(Math.PI/180));
+    const Xaxis =[xCoordXaxis,yCoordXaxis,zCoordXaxis];
+
+    return glMatrix.mat3.fromValues(
+        Xaxis[0],Xaxis[1],Xaxis[2],
+        Yaxis[0],Yaxis[1],Yaxis[2],
+        Zaxis[0],Zaxis[1],Zaxis[2])
+}
