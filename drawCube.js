@@ -101,7 +101,7 @@ function getDrawbleShadowMapCube(gl) {
     void main()
     {
         vec3 out_position= (cubeRotation*attrib_position)+cubePosition;
-        gl_Position = mvp*vec4(out_position*1000.0,1.0);
+        gl_Position = mvp*vec4(out_position*1.0,1.0);
     }
     `;
     const fragmentShaderSource =
@@ -165,6 +165,7 @@ function getDrawbleShadowMapCube(gl) {
         draw: function (uniforms) {
             gl.useProgram(program);
 
+            gl.viewport(0,0,1280,720);  
             gl.bindVertexArray(vaoBack);
 
             gl.uniformMatrix3fv(rotationMatrixUnifromLocation, false, rotationUniform);
