@@ -76,29 +76,44 @@ function initViewProjectionMatrix() {
         if (this.position[0] === NaN) {
             console.log(delta);
         }
-        return {mvpMatrix:mvpMatrix,rotationMatrix:rotationMatrix};
+        return { mvpMatrix: mvpMatrix, rotationMatrix: rotationMatrix };
     }
 
 }
-function getRotationMatrixFromPolarAngles(verticalAngle,horizontalAngle)
-{
-    let verticalRadianAngle=glMatrix.toRadian(verticalAngle);
-    let horizontalRadianAngle=glMatrix.toRadian(horizontalAngle);
-    const xCoordYaxis= Math.sin(verticalRadianAngle)*Math.cos(horizontalRadianAngle);
-    const yCoordYaxis= Math.cos(verticalRadianAngle);
-    const zCoordYaxis= Math.sin(verticalRadianAngle)*Math.sin(horizontalRadianAngle);
-    const Yaxis = [xCoordYaxis,yCoordYaxis,zCoordYaxis];
-    const xCoordZaxis= Math.sin(verticalRadianAngle+(90)*(Math.PI/180))*Math.cos(horizontalRadianAngle);
-    const yCoordZaxis= Math.cos(verticalRadianAngle(90)*(Math.PI/180));
-    const zCoordZaxis= Math.sin(verticalRadianAngle+(90)*(Math.PI/180))*Math.sin(horizontalRadianAngle);
-    const Zaxis =[xCoordZaxis,yCoordZaxis,zCoordZaxis];
-    const xCoordXaxis= Math.sin(verticalRadianAngle+(90)*(Math.PI/180))*Math.cos(horizontalRadianAngle+(90)*(Math.PI/180));
-    const yCoordXaxis= Math.cos(verticalRadianAngle(90)*(Math.PI/180));
-    const zCoordXaxis= Math.sin(verticalRadianAngle+(90)*(Math.PI/180))*Math.sin(horizontalRadianAngle+(90)*(Math.PI/180));
-    const Xaxis =[xCoordXaxis,yCoordXaxis,zCoordXaxis];
+function getRotationMatrixFromPolarAngles(verticalAngle, horizontalAngle) {
+
+    let verticalRadianAngle = glMatrix.glMatrix.toRadian(verticalAngle);
+    let horizontalRadianAngle = glMatrix.glMatrix.toRadian(horizontalAngle);
+
+    
+    const sphericalQuaternion = glMatrix.quat.create();
+    glMatrix.quat.fromEuler(sphericalQuaternion,verticalAngle,horizontalAngle,0);
+    const Xaxis = glMatrix.vec3.fromValues(1.0,0.0,0.0);
+    glMatrix.vec3.transformQuat(Xaxis,Xaxis,sphericalQuaternion);
+
+    const Yaxis = glMatrix.vec3.fromValues(0.0,1.0,0.0);
+    glMatrix.vec3.transformQuat(Yaxis,Yaxis,sphericalQuaternion);
+
+    const Zaxis = glMatrix.vec3.fromValues(0.0,0.0,1.0);
+    glMatrix.vec3.transformQuat(Zaxis,Zaxis,sphericalQuaternion);
+
 
     return glMatrix.mat3.fromValues(
-        Xaxis[0],Xaxis[1],Xaxis[2],
-        Yaxis[0],Yaxis[1],Yaxis[2],
-        Zaxis[0],Zaxis[1],Zaxis[2])
+        Xaxis[0], Xaxis[1], Xaxis[2],
+        Yaxis[0], Yaxis[1], Yaxis[2],
+        Zaxis[0], Zaxis[1], Zaxis[2])
+}
+function getShadowMapUniforms(shadowMapData) {
+    const position = glMatrix.vec3.fromValues(
+        shadowMapData["position x"],
+        shadowMapData["position y"],
+        shadowMapData["position z"]);
+    const rotationMatrix = getRotationMatrixFromPolarAngles(shadowMapData["vertical angle"], shadowMapData["horizontal angle"]);
+    const scale = shadowMapData.scale;
+    return {
+        position: position,
+        scale: scale,
+        rotationMatrix: rotationMatrix
+    };
+
 }

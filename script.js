@@ -21,19 +21,25 @@ async function main() {
     else {
 
         //input logic
-        const updateOnInput = initInputLogic(canvasElement)
+        const updateOnInput = initInputLogic(canvasElement);
         const getUniformMatrices = initViewProjectionMatrix();
+        const updateGUIData = initGUIData();
 
         let sponzaDrawable = await loadSponza(gl);
         let cubeDrawble = getDrawbleShadowMapCube(gl);
+        let blackScreen = renderQuad(gl);
+
         loadingMessageElement.style.display = "none";
+        
+        gl.clearColor(1.0, 1.0, 1.0, 1.0);
         const loop = () => {
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             let inputData = updateOnInput();
             let uniformMatrices = getUniformMatrices(inputData, sponzaDrawable.modelMatrix);
 
             sponzaDrawable.draw(uniformMatrices);
-            cubeDrawble.draw(uniformMatrices)
+            const shadowMap = sponzaDrawable.drawShadowMap(getShadowMapUniforms(updateGUIData()));
+            cubeDrawble.draw(uniformMatrices);
+            blackScreen(shadowMap);
 
             window.requestAnimationFrame(loop);
         }
