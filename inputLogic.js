@@ -115,3 +115,25 @@ function initInputLogic(canvas) {
         return inputData;
     };
 }
+function initGUIData()
+{
+    const shadowMapsGUI = {
+        "position x":0.0,
+        "position y":0.0,
+        "position z":0.0,
+        "vertical angle":0.0,
+        "horizontal angle":0.0,
+        "scale":1.0
+    }
+    
+    const gui = new dat.GUI();
+    gui.add(shadowMapsGUI,"position x").min(-10.0).max(10.0).step(0.1);
+    gui.add(shadowMapsGUI,"position y").min(-10.0).max(10.0).step(0.1);
+    gui.add(shadowMapsGUI,"position z").min(-10.0).max(10.0).step(0.1);
+    gui.add(shadowMapsGUI,"vertical angle").min(0.0).max(360.0).step(0.1);
+    gui.add(shadowMapsGUI,"horizontal angle").min(0.0).max(360.0).step(0.1);
+    gui.add(shadowMapsGUI,"scale").min(0.0).max(50.0).step(0.1);
+    return function(){
+        return shadowMapsGUI;
+    };
+}
