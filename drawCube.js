@@ -94,14 +94,15 @@ function getDrawbleShadowMapCube(gl) {
     layout(location = 0) in vec3 attrib_position;
     uniform mat3 cubeRotation;
     uniform vec3 cubePosition;
+    uniform float cubeScale;
+    uniform mat4 inverseCubeMatrix;
 
     uniform mat4 mvp;
-    uniform mat4 rotationMatrix;
 
     void main()
     {
-        vec3 out_position= (cubeRotation*attrib_position)+cubePosition;
-        gl_Position = mvp*vec4(out_position*1.0,1.0);
+        vec4 out_position= inverseCubeMatrix*vec4(attrib_position,1.0);
+        gl_Position = mvp*out_position;
     }
     `;
     const fragmentShaderSource =
@@ -149,29 +150,32 @@ function getDrawbleShadowMapCube(gl) {
     gl.deleteShader(fragmentShader);
 
     const colorUniformLocation = gl.getUniformLocation(program, "color");
+
     const rotationMatrixUnifromLocation = gl.getUniformLocation(program, "cubeRotation");
     const displacementUniformLocation = gl.getUniformLocation(program, "cubePosition");
+    const scaleUniformLocation  = gl.getUniformLocation(program, "cubeScale");
+    const inverseCubeMatrixUniform  = gl.getUniformLocation(program, "inverseCubeMatrix");
 
     const redColorUniform = glMatrix.vec3.fromValues(1.0, 0.0, 0.0);
     const greenColorUniform = glMatrix.vec3.fromValues(0.0, 1.0, 0.0);
     const blueColorUniform = glMatrix.vec3.fromValues(0.0, 0.0, 1.0);
 
-    const rotationUniform = glMatrix.mat3.create();
-    const displacementUniform = glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
 
 
     const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
     return {
-        draw: function (uniforms) {
+        draw: function (uniforms,cubeUniforms) {
             gl.useProgram(program);
 
             gl.viewport(0,0,1280,720);  
             gl.bindVertexArray(vaoBack);
 
-            gl.uniformMatrix3fv(rotationMatrixUnifromLocation, false, rotationUniform);
-            gl.uniform3fv(colorUniformLocation, redColorUniform);
-            gl.uniform3fv(displacementUniformLocation, displacementUniform);
+            gl.uniformMatrix3fv(rotationMatrixUnifromLocation, false, cubeUniforms.rotationMatrix);
+            gl.uniformMatrix4fv(inverseCubeMatrixUniform, false, cubeUniforms.matrix);
+            gl.uniform3fv(displacementUniformLocation, cubeUniforms.position);
+            gl.uniform1f(scaleUniformLocation, cubeUniforms.scale);
 
+            gl.uniform3fv(colorUniformLocation, redColorUniform);
 
             gl.uniformMatrix4fv(mvpUniformLocation, false, uniforms.mvpMatrix);
 
@@ -179,9 +183,13 @@ function getDrawbleShadowMapCube(gl) {
 
             gl.bindVertexArray(vaoMiddle);
 
-            gl.uniformMatrix3fv(rotationMatrixUnifromLocation, false, rotationUniform);
+            gl.uniformMatrix3fv(rotationMatrixUnifromLocation, false, cubeUniforms.rotationMatrix);
+            gl.uniformMatrix4fv(inverseCubeMatrixUniform, false, cubeUniforms.matrix);
+            gl.uniform3fv(displacementUniformLocation, cubeUniforms.position);
+            gl.uniform1f(scaleUniformLocation, cubeUniforms.scale);
+
+
             gl.uniform3fv(colorUniformLocation, greenColorUniform);
-            gl.uniform3fv(displacementUniformLocation, displacementUniform);
 
             gl.uniformMatrix4fv(mvpUniformLocation, false, uniforms.mvpMatrix);
 
@@ -189,9 +197,13 @@ function getDrawbleShadowMapCube(gl) {
 
             gl.bindVertexArray(vaoFar);
 
-            gl.uniformMatrix3fv(rotationMatrixUnifromLocation, false, rotationUniform);
+            gl.uniformMatrix3fv(rotationMatrixUnifromLocation, false, cubeUniforms.rotationMatrix);
+            gl.uniformMatrix4fv(inverseCubeMatrixUniform, false, cubeUniforms.matrix);
+            gl.uniform3fv(displacementUniformLocation, cubeUniforms.position);
+            gl.uniform1f(scaleUniformLocation, cubeUniforms.scale);
+
+
             gl.uniform3fv(colorUniformLocation, blueColorUniform);
-            gl.uniform3fv(displacementUniformLocation, displacementUniform);
 
             gl.uniformMatrix4fv(mvpUniformLocation, false, uniforms.mvpMatrix);
 

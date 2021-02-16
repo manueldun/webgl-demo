@@ -7,7 +7,7 @@ function getModelMatrix(gltfObj) {
             gltfObj.nodes[0].scale[1],
             gltfObj.nodes[0].scale[2]
         );
-        glMatrix.mat4.scale(modelMatrix, modelMatrix, scaleVector);
+        //glMatrix.mat4.scale(modelMatrix, modelMatrix, scaleVector);
     }
     return modelMatrix;
 }
@@ -385,16 +385,17 @@ async function loadGLTF(gl, path, gltfObj) {
         layout(location = 0) in vec3 attrib_position;
 
         
-        uniform vec3 light_position;
-        uniform mat3 rotation_matrix;
-        uniform float scale;
+        uniform mat3 shadowMapRotation;
+        uniform vec3 shadowMapPosition;
+        uniform float shadowMapScale;
+        uniform mat4 shadowMapMatrix;
 
         out vec3 var_Position;
         flat out vec3 flat_positionOrigin;
         void main()
         {
-            flat_positionOrigin = light_position+vec3(0.0,0.0,1.0);
-            vec4 position = vec4(rotation_matrix*(((attrib_position*scale))+light_position),1.0);
+            flat_positionOrigin = shadowMapPosition+vec3(0.0,0.0,1.0);
+            vec4 position = shadowMapMatrix*vec4(attrib_position,1.0);
             var_Position = position.xyz;
             gl_Position = position;
         }
@@ -404,18 +405,19 @@ async function loadGLTF(gl, path, gltfObj) {
         precision highp float;
         #pragma vscode_glsllint_stage : frag
         
-        uniform vec3 light_position;
-        uniform mat3 rotation_matrix;
-        uniform float scale;
+        
+        uniform mat3 shadowMapRotation;
+        uniform vec3 shadowMapPosition;
+        uniform float shadowMapScale;
 
         in vec3 var_Position;
         flat in vec3 flat_positionOrigin;
         out uint out_color;
         void main()
         {
-            vec3 lightOriginToPosition = flat_positionOrigin-var_Position;
-            float distance = dot(rotation_matrix[2],lightOriginToPosition);
-            out_color = uint(distance*100.0);
+            vec3 lightOriginToPosition = var_Position-flat_positionOrigin;
+            float distance = dot(vec3(0.0,0.0,1.0),lightOriginToPosition);
+            out_color = uint(distance*255.0);
         }
         `;
         const vertexShader = gl.createShader(gl.VERTEX_SHADER);
@@ -448,9 +450,10 @@ async function loadGLTF(gl, path, gltfObj) {
 
     }
 
-    const lightShadowMapPositionUniform = gl.getUniformLocation(shadowMapProgram, "light_position");
-    const rotationShadowMapMatrixUniform = gl.getUniformLocation(shadowMapProgram, "rotation_matrix");
-    const scaleShadowMapUniform = gl.getUniformLocation(shadowMapProgram, "scale");
+    const lightShadowMapPositionUniform = gl.getUniformLocation(shadowMapProgram, "shadowMapPosition");
+    const rotationShadowMapMatrixUniform = gl.getUniformLocation(shadowMapProgram, "shadowMapRotation");
+    const scaleShadowMapUniform = gl.getUniformLocation(shadowMapProgram, "shadowMapScale");
+    const shadowMapMatrixUniform = gl.getUniformLocation(shadowMapProgram, "shadowMapMatrix");
 
 
     return {
@@ -458,7 +461,7 @@ async function loadGLTF(gl, path, gltfObj) {
         drawShadowMap: function (uniforms) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
             gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
-            gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([0, 0, 0, 0]))
+            gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([255, 0, 0, 0]))
             gl.useProgram(shadowMapProgram);
             gl.clear(gl.DEPTH_BUFFER_BIT);
             gl.viewport(0, 0, 256, 256);
@@ -472,6 +475,7 @@ async function loadGLTF(gl, path, gltfObj) {
                 gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
                 gl.uniform3fv(lightShadowMapPositionUniform, uniforms.position);
                 gl.uniformMatrix3fv(rotationShadowMapMatrixUniform, false, uniforms.rotationMatrix);
+                gl.uniformMatrix4fv(shadowMapMatrixUniform, false, uniforms.inverse);
                 gl.uniform1f(scaleShadowMapUniform, uniforms.scale);
 
                 gl.drawElements(gl.TRIANGLES, drawble.count, drawble.indiceType, 0);
@@ -508,6 +512,6 @@ async function loadGLTF(gl, path, gltfObj) {
     };
 }
 async function loadSponza(gl) {
-    const objFile = JSON.parse(await getStringFile("/BoxTextured/", "BoxTextured.gltf"));
-    return loadGLTF(gl, "/BoxTextured/", objFile);
+    const objFile = JSON.parse(await getStringFile("/sponza/", "Sponza.gltf"));
+    return loadGLTF(gl, "/sponza/", objFile);
 }

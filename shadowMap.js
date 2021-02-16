@@ -42,7 +42,7 @@ function renderQuad(gl)
     void main()
     {
         vec4 data = vec4(texture(color_sampler, var_coords.xy));
-        out_color = vec4(data.r/100.0,0.0,0.0,1.0);
+        out_color = vec4(data.r/255.0,0.0,0.0,1.0);
 
     }
     `;
@@ -77,7 +77,7 @@ function renderQuad(gl)
 
     return function(depthMap)
     {
-        gl.viewport(0,0,720,720);   
+        gl.viewport(0,0,1280,720);   
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindVertexArray(null);
         gl.disable(gl.DEPTH_TEST);

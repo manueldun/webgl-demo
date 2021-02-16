@@ -110,10 +110,21 @@ function getShadowMapUniforms(shadowMapData) {
         shadowMapData["position z"]);
     const rotationMatrix = getRotationMatrixFromPolarAngles(shadowMapData["vertical angle"], shadowMapData["horizontal angle"]);
     const scale = shadowMapData.scale;
+
+    const matrix = glMatrix.mat4.create();
+    
+    const sphericalQuaternion = glMatrix.quat.create();
+    glMatrix.quat.fromEuler(sphericalQuaternion,shadowMapData["vertical angle"],shadowMapData["horizontal angle"],0);
+    const scaleVec = glMatrix.vec3.fromValues(scale,scale,scale);
+    glMatrix.mat4.fromRotationTranslationScale(matrix,sphericalQuaternion,position,scaleVec);
+    const inverse = glMatrix.mat4.create();
+    glMatrix.mat4.invert(inverse,matrix);
     return {
         position: position,
         scale: scale,
-        rotationMatrix: rotationMatrix
+        rotationMatrix: rotationMatrix,
+        matrix:matrix,
+        inverse:inverse
     };
 
 }
