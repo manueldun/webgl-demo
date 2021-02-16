@@ -36,9 +36,9 @@ async function main() {
             let inputData = updateOnInput();
             let uniformMatrices = getUniformMatrices(inputData, sponzaDrawable.modelMatrix);
 
-            sponzaDrawable.draw(uniformMatrices);
             const shadowMapUniforms = getShadowMapUniforms(updateGUIData());
             const shadowMap = sponzaDrawable.drawShadowMap(shadowMapUniforms);
+            sponzaDrawable.draw(uniformMatrices,shadowMap,shadowMapUniforms);
             cubeDrawble.draw(uniformMatrices,shadowMapUniforms);
             blackScreen(shadowMap);
 

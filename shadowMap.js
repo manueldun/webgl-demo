@@ -82,6 +82,8 @@ function renderQuad(gl)
         gl.bindVertexArray(null);
         gl.disable(gl.DEPTH_TEST);
         gl.useProgram(program);
+        
+        gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, depthMap);
         gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
         gl.enable(gl.DEPTH_TEST);

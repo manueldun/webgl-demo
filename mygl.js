@@ -307,7 +307,9 @@ async function loadGLTF(gl, path, gltfObj) {
 
     const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
     const rotationMatrixUniform = gl.getUniformLocation(program, "rotationMatrix");
-    //const samplerUniformLocation = gl.getUniformLocation(program, "color_sampler");
+    const colorSamplerUniformLocation = gl.getUniformLocation(program, "color_sampler");
+    const shadowMapSamplerUniformLocation = gl.getUniformLocation(program, "shadowMap_sampler");
+    const projectedShadowMapMatrixUniformLocation = gl.getUniformLocation(program, "shadowMapMatrix");
 
     // create to render to
     const targetTexture = gl.createTexture();
@@ -391,10 +393,8 @@ async function loadGLTF(gl, path, gltfObj) {
         uniform mat4 shadowMapMatrix;
 
         out vec3 var_Position;
-        flat out vec3 flat_positionOrigin;
         void main()
         {
-            flat_positionOrigin = shadowMapPosition+vec3(0.0,0.0,1.0);
             vec4 position = shadowMapMatrix*vec4(attrib_position,1.0);
             var_Position = position.xyz;
             gl_Position = position;
@@ -411,12 +411,11 @@ async function loadGLTF(gl, path, gltfObj) {
         uniform float shadowMapScale;
 
         in vec3 var_Position;
-        flat in vec3 flat_positionOrigin;
         out uint out_color;
         void main()
         {
-            vec3 lightOriginToPosition = var_Position-flat_positionOrigin;
-            float distance = dot(vec3(0.0,0.0,1.0),lightOriginToPosition);
+            vec3 lightOriginToPosition = var_Position-vec3(0.0,0.0,-1.0);;
+            float distance = dot(vec3(0.0,0.0,1.0),lightOriginToPosition)/2.0;
             out_color = uint(distance*255.0);
         }
         `;
@@ -487,7 +486,7 @@ async function loadGLTF(gl, path, gltfObj) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             return targetTexture;
         },
-        draw: function (uniformMatrices) {
+        draw: function (uniformMatrices,shadowMap,shadowMapUniforms) {
 
             gl.viewport(0, 0, 1280, 720);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -496,9 +495,17 @@ async function loadGLTF(gl, path, gltfObj) {
 
             gl.useProgram(program);
             drawbles.map((drawble) => {
-                gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
                 gl.uniformMatrix4fv(rotationMatrixUniform, false, uniformMatrices.rotationMatrix);
                 gl.uniformMatrix4fv(mvpUniformLocation, false, uniformMatrices.mvpMatrix);
+                gl.uniformMatrix4fv(projectedShadowMapMatrixUniformLocation, false, shadowMapUniforms.inverse);
+
+                gl.uniform1i(colorSamplerUniformLocation, 0);
+                gl.uniform1i(shadowMapSamplerUniformLocation, 1);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
+                gl.activeTexture(gl.TEXTURE1);
+                gl.bindTexture(gl.TEXTURE_2D, shadowMap);
 
                 gl.bindVertexArray(drawble.vao);
 

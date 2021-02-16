@@ -1,15 +1,21 @@
 #version 300 es
 
 precision highp float;
+precision highp usampler2D;
 
 uniform sampler2D color_sampler;
+uniform usampler2D shadowMap_sampler;
+uniform mat4 shadowMapMatrix;
 
 in vec2 var_texCoord;
 in vec3 var_normal;
+in vec3 var_shadowMapCoord;
 
 out vec4 out_color;
 void main()
 {  
+
+    
     vec3 light=normalize(-vec3(1.0,-1.0,0.0));
     vec4 colorTexture = texture(color_sampler, var_texCoord);
     if(colorTexture.a<0.9)
@@ -18,6 +24,7 @@ void main()
     }
     vec3 colorTexture3 = vec3(colorTexture);
     out_color = vec4(dot(var_normal,light)*colorTexture3*0.7+colorTexture3*0.3,1.0);
+    //out_color = vec4((texture(shadowMap_sampler, (var_shadowMapCoord.xy*2.0)-1.0).rgb),1.0);
     
 
 }
