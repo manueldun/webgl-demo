@@ -42,7 +42,7 @@ function renderQuad(gl)
     void main()
     {
         vec4 data = vec4(texture(color_sampler, var_coords.xy));
-        out_color = vec4(data.r/255.0,0.0,0.0,1.0);
+        out_color = vec4(data.r/1000000.0,0.0,0.0,1.0);
 
     }
     `;

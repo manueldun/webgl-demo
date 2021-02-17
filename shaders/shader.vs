@@ -9,12 +9,13 @@ uniform mat4 mvp;
 uniform mat4 rotationMatrix;
 uniform mat4 shadowMapMatrix;
 
+
 out vec2 var_texCoord;
 out vec3 var_normal;
 out vec3 var_shadowMapCoord;
 void main()
 {
-    vec4 shadowMapProjection=(shadowMapMatrix*vec4(attrib_position,1.0));
+    vec4 shadowMapProjection=shadowMapMatrix*vec4(attrib_position,1.0);
     var_shadowMapCoord=shadowMapProjection.xyz/shadowMapProjection.w;
     var_normal = attrib_normal;
     var_texCoord = attrib_texCoord;
