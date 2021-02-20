@@ -7,7 +7,7 @@ uniform sampler2D color_sampler;
 uniform usampler2D shadowMap_sampler;
 uniform mat4 shadowMapMatrix;
 uniform vec3 shadowMapPosition;
-uniform mat4 rotationMatrix;
+uniform mat3 rotationMatrix;
 
 in vec2 var_texCoord;
 in vec3 var_normal;
@@ -18,7 +18,7 @@ void main()
 {  
 
     
-    vec3 light=(rotationMatrix*vec4((vec3(0.0,0.0,1.0),1.0))).xyz;
+    vec3 light=rotationMatrix*vec3(0.0,0.0,-1.0);
     vec4 colorTexture = texture(color_sampler, var_texCoord);
     if(colorTexture.a<0.9)
     {
@@ -45,10 +45,10 @@ void main()
         
         if(distanceFromLight<shadowMapDepth+0.005)
          {
-            out_color = vec4(dot(var_normal,light)*colorTexture3*0.6+colorTexture3*0.4,1.0);//lit
+            out_color = vec4(dot(var_normal,light)*colorTexture3*0.8+colorTexture3*0.2,1.0);//lit
          }
          else{
-            out_color = vec4(colorTexture3*0.2,1.0);//unlit
+            out_color = vec4(+colorTexture3*0.2,1.0);//lit
          }
      }
      else{

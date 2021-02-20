@@ -496,7 +496,7 @@ async function loadGLTF(gl, path, gltfObj) {
 
             gl.useProgram(program);
             drawbles.map((drawble) => {
-                gl.uniformMatrix4fv(rotationMatrixUniform, false, shadowMapUniforms.rotationMatrix);
+                gl.uniformMatrix3fv(rotationMatrixUniform, false, shadowMapUniforms.rotationMatrix);
                 gl.uniformMatrix4fv(mvpUniformLocation, false, uniformMatrices.mvpMatrix);
                 gl.uniformMatrix4fv(projectedShadowMapMatrixUniformLocation, false, shadowMapUniforms.inverse);
 

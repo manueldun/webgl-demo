@@ -6,7 +6,7 @@ layout(location = 2) in vec2 attrib_texCoord;
 layout(location = 3) in vec3 attrib_tangent;
 
 uniform mat4 mvp;
-uniform mat4 rotationMatrix;
+uniform mat3 rotationMatrix;
 uniform mat4 shadowMapMatrix;
 
 

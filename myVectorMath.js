@@ -115,8 +115,10 @@ function getShadowMapUniforms(shadowMapData) {
     
     const sphericalQuaternion = glMatrix.quat.create();
     glMatrix.quat.fromEuler(sphericalQuaternion,shadowMapData["vertical angle"],shadowMapData["horizontal angle"],0);
+    
     const scaleVec = glMatrix.vec3.fromValues(scale,scale,scale);
     glMatrix.mat4.fromRotationTranslationScale(matrix,sphericalQuaternion,position,scaleVec);
+
     const inverse = glMatrix.mat4.create();
     glMatrix.mat4.invert(inverse,matrix);
     return {
