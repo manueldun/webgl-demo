@@ -4,7 +4,7 @@ precision highp float;
 precision highp usampler2D;
 
 uniform sampler2D color_sampler;
-uniform usampler2D shadowMap_sampler;
+uniform sampler2D shadowMap_sampler;
 uniform mat4 shadowMapMatrix;
 uniform vec3 shadowMapPosition;
 uniform mat3 rotationMatrix;
@@ -38,18 +38,19 @@ void main()
      {
         
         vec3 lightOriginToPosition = var_shadowMapCoord-vec3(0.0,0.0,-1.0);
-        float distanceFromLight = (dot(vec3(0.0,0.0,1.0),lightOriginToPosition)/2.0);
+        float distanceFromLight = lightOriginToPosition.z/2.0;
 
-        float shadowMapDepth = float(texture(shadowMap_sampler, (shadowMapCoordinates+vec2(1.0,1.0))/2.0).r)/1000000.0;
+        float shadowMapDepth = float(texture(shadowMap_sampler, (shadowMapCoordinates+vec2(1.0,1.0))/2.0).r);
         //out_color = vec4(distanceFromLight,distanceFromLight,distanceFromLight,1.0);
         
-        if(distanceFromLight<shadowMapDepth+0.005)
+        if(distanceFromLight<shadowMapDepth+0.01)
          {
             out_color = vec4(dot(var_normal,light)*colorTexture3*0.8+colorTexture3*0.2,1.0);//lit
          }
          else{
             out_color = vec4(+colorTexture3*0.2,1.0);//lit
          }
+        //out_color = vec4(distanceFromLight,0.0,0.0,1.0);
      }
      else{
 

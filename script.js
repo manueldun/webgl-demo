@@ -9,7 +9,6 @@ async function main() {
     const gl = canvasElement.getContext('webgl2', {antialias : false});
 
     gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
 
     gl.clearColor(1.0, 1.0, 1.0, 1.0);
 
@@ -27,9 +26,10 @@ async function main() {
 
         let sponzaDrawable = await loadSponza(gl);
         let cubeDrawble = getDrawbleShadowMapCube(gl);
-        let blackScreen = renderQuad(gl);
+        let quad = renderQuad(gl);
 
         loadingMessageElement.style.display = "none";
+        
         
         gl.clearColor(1.0, 1.0, 1.0, 1.0);
         const loop = () => {
@@ -40,7 +40,7 @@ async function main() {
             const shadowMap = sponzaDrawable.drawShadowMap(shadowMapUniforms);
             sponzaDrawable.draw(uniformMatrices,shadowMap,shadowMapUniforms);
             cubeDrawble.draw(uniformMatrices,shadowMapUniforms);
-            blackScreen(shadowMap);
+            quad(shadowMap);
 
             window.requestAnimationFrame(loop);
         }

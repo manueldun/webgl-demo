@@ -312,71 +312,42 @@ async function loadGLTF(gl, path, gltfObj) {
     const projectedShadowMapMatrixUniformLocation = gl.getUniformLocation(program, "shadowMapMatrix");
     const lightOriginUniformLocation = gl.getUniformLocation(program, "shadowMapPosition");
 
-    // create to render to
-    const targetTexture = gl.createTexture();
+    const depthTexture = gl.createTexture();
     const fb = gl.createFramebuffer();
 
-    {
+    
 
-        const targetTextureWidth = 2048;
-        const targetTextureHeight = 2048;
-        gl.bindTexture(gl.TEXTURE_2D, targetTexture);
-        // define size and format of level 0
-        const level = 0;
-        const internalFormat = gl.R32UI;
-        const border = 0;
-        const format = gl.RED_INTEGER;
-        const type = gl.UNSIGNED_INT;
-        const data = null;
-        gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
-            targetTextureWidth, targetTextureHeight, border,
-            format, type, data);
+    // bind the framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
 
-        // set the filtering so we don't need mips
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        // bind the framebuffer
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    const depthTextureSize = 512;
+    gl.bindTexture(gl.TEXTURE_2D, depthTexture);
+    //gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+    gl.texImage2D(
+        gl.TEXTURE_2D,      // target
+        0,                  // mip level
+        gl.DEPTH_COMPONENT32F , // internal format
+        depthTextureSize,   // width
+        depthTextureSize,   // height
+        0,                  // border
+        gl.DEPTH_COMPONENT, // format
+        gl.FLOAT,           // type
+        null);              // data
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-        // attach the texture as the first color attachment
-        const attachmentPoint = gl.COLOR_ATTACHMENT0;
-        gl.framebufferTexture2D(
-            gl.FRAMEBUFFER,
-            attachmentPoint,
-            gl.TEXTURE_2D,
-            targetTexture,
-            level);
+    gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,       // target
+        gl.DEPTH_ATTACHMENT,  // attachment point
+        gl.TEXTURE_2D,        // texture target
+        depthTexture,         // texture
+        0);                   // mip level
 
-        const depthTexture = gl.createTexture();
-        const depthTextureSize = 2048;
-        gl.bindTexture(gl.TEXTURE_2D, depthTexture);
-        gl.texImage2D(
-            gl.TEXTURE_2D,      // target
-            0,                  // mip level
-            gl.DEPTH_COMPONENT32F, // internal format
-            depthTextureSize,   // width
-            depthTextureSize,   // height
-            0,                  // border
-            gl.DEPTH_COMPONENT, // format
-            gl.FLOAT,           // type
-            null);              // data
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        gl.framebufferTexture2D(
-            gl.FRAMEBUFFER,       // target
-            gl.DEPTH_ATTACHMENT,  // attachment point
-            gl.TEXTURE_2D,        // texture target
-            depthTexture,         // texture
-            0);                   // mip level
 
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-    }
 
 
     let shadowMapProgram = gl.createProgram();
@@ -388,17 +359,11 @@ async function loadGLTF(gl, path, gltfObj) {
         layout(location = 0) in vec3 attrib_position;
 
         
-        uniform mat3 shadowMapRotation;
-        uniform vec3 shadowMapPosition;
-        uniform float shadowMapScale;
         uniform mat4 shadowMapMatrix;
 
-        out vec3 var_Position;
         void main()
         {
-            vec4 position = shadowMapMatrix*vec4(attrib_position,1.0);
-            var_Position = position.xyz;
-            gl_Position = position;
+            gl_Position = shadowMapMatrix*vec4(attrib_position,1.0);
         }
         `;
         const fragmentShaderSource =
@@ -407,17 +372,10 @@ async function loadGLTF(gl, path, gltfObj) {
         #pragma vscode_glsllint_stage : frag
         
         
-        uniform mat3 shadowMapRotation;
-        uniform vec3 shadowMapPosition;
-        uniform float shadowMapScale;
-
-        in vec3 var_Position;
-        out uint out_color;
+        out vec4 out_color;
         void main()
         {
-            vec3 lightOriginToPosition = var_Position-vec3(0.0,0.0,-1.0);
-            float distance = dot(vec3(0.0,0.0,1.0),lightOriginToPosition)/2.0;
-            out_color = uint(distance*1000000.0);
+            out_color = vec4(0.0,0.0,0.0,1.0);
         }
         `;
         const vertexShader = gl.createShader(gl.VERTEX_SHADER);
@@ -460,24 +418,26 @@ async function loadGLTF(gl, path, gltfObj) {
         modelMatrix: getModelMatrix(gltfObj),
         drawShadowMap: function (uniforms) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-            gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
-            gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([1000000, 0, 0, 0]))
+            //gl.clearColor(1.0,1.0,1.0,1.0);
+            //gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+            //gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([100, 0, 0, 0]));
+
+            
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.viewport(0, 0, depthTextureSize, depthTextureSize);
             gl.useProgram(shadowMapProgram);
-            gl.clear(gl.DEPTH_BUFFER_BIT);
-            gl.viewport(0, 0, 2048, 2048);
             drawbles.map((drawble) => {
+
+                //gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
+                //gl.uniform3fv(lightShadowMapPositionUniform, uniforms.position);
+                //gl.uniformMatrix3fv(rotationShadowMapMatrixUniform, false, uniforms.rotationMatrix);
+                
+                gl.uniformMatrix4fv(shadowMapMatrixUniform, false, uniforms.inverse);
+                //gl.uniform1f(scaleShadowMapUniform, uniforms.scale);
 
                 gl.bindVertexArray(drawble.vao);
 
                 gl.enableVertexAttribArray(positionAttributeLocation);
-                gl.disableVertexAttribArray(texCoordAttributeLocation);
-                gl.disableVertexAttribArray(normalAttributeLocation);
-                gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
-                gl.uniform3fv(lightShadowMapPositionUniform, uniforms.position);
-                gl.uniformMatrix3fv(rotationShadowMapMatrixUniform, false, uniforms.rotationMatrix);
-                gl.uniformMatrix4fv(shadowMapMatrixUniform, false, uniforms.inverse);
-                gl.uniform1f(scaleShadowMapUniform, uniforms.scale);
-
                 gl.drawElements(gl.TRIANGLES, drawble.count, drawble.indiceType, 0);
 
 
@@ -485,7 +445,7 @@ async function loadGLTF(gl, path, gltfObj) {
 
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            return targetTexture;
+            return depthTexture;
         },
         draw: function (uniformMatrices,shadowMap,shadowMapUniforms) {
 
@@ -522,6 +482,6 @@ async function loadGLTF(gl, path, gltfObj) {
     };
 }
 async function loadSponza(gl) {
-    const objFile = JSON.parse(await getStringFile("/sponza/", "Sponza.gltf"));
+    const objFile = JSON.parse(await getStringFile("/sponza/", "sponza.gltf"));
     return loadGLTF(gl, "/sponza/", objFile);
 }

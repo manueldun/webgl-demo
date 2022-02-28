@@ -5,28 +5,30 @@ function renderQuad(gl)
     #pragma vscode_glsllint_stage : vert
 
     out vec2 var_coords;
+    /*
+    const vec4 position[4]=vec4[](
+        vec4(-0.5,-0.5,0.0,1.0),//left down
+        vec4(0.5,-0.5,0.0,1.0),//right down
+        vec4(-0.5,0.5,0.0,1.0),//left up
+        vec4(0.5,0.5,0.0,1.0)//right up
+    );*/
+    const vec4 position[4]=vec4[](
+        vec4(-1.0,0.75,0.0,1.0),
+        vec4(-0.75,0.75,0.0,1.0),
+        vec4(-1.0,1.0,0.0,1.0),
+        vec4(-0.75,1.0,0.0,1.0)
+    );
+    const vec2 coords[4]=vec2[](
+        vec2(0.0,0.0),
+        vec2(1.0,0.0),
+        vec2(0.0,1.0),
+        vec2(1.0,1.0)
+    );
     void main()
     {
-        if(gl_VertexID==0)
-        {
-            gl_Position = vec4(-1.0,0.75,0.0,1.0);
-            var_coords= vec2(0.0,0.0);
-        }
-        if(gl_VertexID==1)
-        {
-            gl_Position = vec4(-1.0,1.0,0.0,1.0);
-            var_coords= vec2(0.0,1.0);
-        }
-        if(gl_VertexID==2)
-        {
-            gl_Position = vec4(-0.75,0.75,0.0,1.0);
-            var_coords= vec2(1.0,0.0);
-        }
-        if(gl_VertexID==3)
-        {
-            gl_Position = vec4(-0.75,1.0,0.0,1.0);
-            var_coords= vec2(1.0,1.0);
-        }
+
+        gl_Position = position[gl_VertexID];
+        var_coords= coords[gl_VertexID];
     }
     `;
     const fragmentShaderSource =
@@ -35,14 +37,14 @@ function renderQuad(gl)
     precision highp usampler2D;
     #pragma vscode_glsllint_stage : frag
     
-    uniform highp usampler2D color_sampler;
+    uniform highp sampler2D color_sampler;
 
     in vec2 var_coords;
     out vec4 out_color;
     void main()
     {
-        vec4 data = vec4(texture(color_sampler, var_coords.xy));
-        out_color = vec4(data.r/1000000.0,0.0,0.0,1.0);
+        vec4 data = texture(color_sampler, var_coords.xy);
+        out_color = data;
 
     }
     `;
@@ -74,7 +76,6 @@ function renderQuad(gl)
     }
     gl.deleteShader(vertexShader);
     gl.deleteShader(fragmentShader);
-
     return function(depthMap)
     {
         gl.viewport(0,0,1280,720);   
@@ -84,7 +85,7 @@ function renderQuad(gl)
         gl.useProgram(program);
         
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, depthMap);
+        gl.bindTexture(gl.TEXTURE_2D, depthMap)
         gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
         gl.enable(gl.DEPTH_TEST);
     };
