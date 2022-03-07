@@ -208,15 +208,20 @@ async function loadGLTF(gl, path, gltfObj) {
         //tangent Attribute
         //gl.enableVertexAttribArray(tangentAttributeLocation);
         const tangentAccessorIndex = primitive.attributes.TANGENT;
-        if (false) {
+        
+        drawble.tangentAttributeLocation = null;
+        if (tangentAccessorIndex!=undefined) {
 
             const tangentAccessor = gltfObj.accessors[tangentAccessorIndex];
             const tangentBufferViewIndex = tangentAccessor.bufferView;
             const tangentBufferView = gltfObj.bufferViews[tangentBufferViewIndex];
-            const tangentAttributeBuffer = bufferSlices[tangentBufferView];
+            const tangentAttributeBuffer = bufferSlices[tangentBufferViewIndex];
 
             //create tangentBuffer
 
+            const glTangentBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, glTangentBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, tangentAttributeBuffer, gl.STATIC_DRAW);
             switch (tangentAccessor.type) {
                 case "SCALAR":
                     size = 1;
@@ -238,8 +243,10 @@ async function loadGLTF(gl, path, gltfObj) {
             type = gl.FLOAT;   // the data is 32bit floats
             normalize = false; // don't normalize the data
             stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-            offset = tangentBufferView.byteOffset;        // start at the beginning of the buffer
+            offset = tangentAccessor.byteOffset;        // start at the beginning of the buffer
             gl.vertexAttribPointer(tangentAttributeLocation, size, type, normalize, stride, offset);
+            
+            drawble.tangentAttributeLocation = tangentAttributeLocation;
         }
         //index Attribute
 
@@ -260,14 +267,22 @@ async function loadGLTF(gl, path, gltfObj) {
         drawble.positionAttributeLocation = positionAttributeLocation;
         drawble.normalAttributeLocation = normalAttributeLocation;
         drawble.texCoordAttributeLocation = texCoordAttributeLocation;
-        drawble.tangentAttributeLocation = tangentAttributeLocation;
 
         const materialIndex = primitive.material;
         const material = gltfObj.materials[materialIndex];
+
         const colorTextureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
         const imageIndex = gltfObj.textures[colorTextureIndex].source;
 
+        if(material.normalTexture!=undefined)
+        {
+            const normalTextureIndex = material.normalTexture.index;
+            const imageNormalIndex = gltfObj.textures[normalTextureIndex].source;
+            drawble.glNormalTexture = glTextures[imageNormalIndex];
+        }
+
         drawble.glTexture = glTextures[imageIndex];
+
 
         return drawble;
 
@@ -308,6 +323,7 @@ async function loadGLTF(gl, path, gltfObj) {
     const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
     const rotationMatrixUniform = gl.getUniformLocation(program, "rotationMatrix");
     const colorSamplerUniformLocation = gl.getUniformLocation(program, "color_sampler");
+    const normalSamplerUniformLocation = gl.getUniformLocation(program, "normal_sampler");
     const shadowMapSamplerUniformLocation = gl.getUniformLocation(program, "shadowMap_sampler");
     const projectedShadowMapMatrixUniformLocation = gl.getUniformLocation(program, "shadowMapMatrix");
     const lightOriginUniformLocation = gl.getUniformLocation(program, "shadowMapPosition");
@@ -320,7 +336,7 @@ async function loadGLTF(gl, path, gltfObj) {
     // bind the framebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
 
-    const depthTextureSize = 512;
+    const depthTextureSize = 2048;
     gl.bindTexture(gl.TEXTURE_2D, depthTexture);
     //gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
     gl.texImage2D(
@@ -464,17 +480,26 @@ async function loadGLTF(gl, path, gltfObj) {
                 
                 gl.uniform1i(colorSamplerUniformLocation, 0);
                 gl.uniform1i(shadowMapSamplerUniformLocation, 1);
+                gl.uniform1i(normalSamplerUniformLocation, 2);
 
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
                 gl.activeTexture(gl.TEXTURE1);
                 gl.bindTexture(gl.TEXTURE_2D, shadowMap);
+                if(drawble.glNormalTexture!=undefined)
+                {
+                    gl.activeTexture(gl.TEXTURE2);
+                    gl.bindTexture(gl.TEXTURE_2D, drawble.glNormalTexture);
+                }
 
                 gl.bindVertexArray(drawble.vao);
 
                 gl.enableVertexAttribArray(positionAttributeLocation);
                 gl.enableVertexAttribArray(texCoordAttributeLocation);
                 gl.enableVertexAttribArray(normalAttributeLocation);
+                if (drawble.tangentAttributeLocation!=null) {
+                    gl.enableVertexAttribArray(drawble.tangentAttributeLocation);
+                }
 
                 gl.drawElements(gl.TRIANGLES, drawble.count, drawble.indiceType, 0);
             });
