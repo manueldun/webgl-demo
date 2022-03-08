@@ -507,6 +507,6 @@ async function loadGLTF(gl, path, gltfObj) {
     };
 }
 async function loadSponza(gl) {
-    const objFile = JSON.parse(await getStringFile("/sponza/", "sponza.gltf"));
-    return loadGLTF(gl, "/sponza/", objFile);
+    const objFile = JSON.parse(await getStringFile("sponza/", "sponza.gltf"));
+    return loadGLTF(gl, "sponza/", objFile);
 }
