@@ -84,5 +84,4 @@ void main()
 
       float gamma = 2.2f;
       out_color.rgb = pow(out_color.rgb, vec3(1.0f/gamma));
-      //out_color = vec4(normal,1.0f);
 }
