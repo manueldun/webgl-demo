@@ -121,18 +121,14 @@ function initGUIData()
         "position x":0.0,
         "position y":0.0,
         "position z":0.0,
-        "vertical angle":0.0,
-        "horizontal angle":0.0,
+        "vertical angle":73.46,
+        "horizontal angle":54.25,
         "scale":1900.0
     }
     
     const gui = new dat.GUI();
-    gui.add(shadowMapsGUI,"position x").min(-5000.0).max(5000.0).step(0.01);
-    gui.add(shadowMapsGUI,"position y").min(-5000.0).max(5000.0).step(0.01);
-    gui.add(shadowMapsGUI,"position z").min(-5000.0).max(5000.0).step(0.01);
     gui.add(shadowMapsGUI,"vertical angle").min(0.0).max(180.0).step(0.0001);
     gui.add(shadowMapsGUI,"horizontal angle").min(0.0).max(180.0).step(0.0001);
-    gui.add(shadowMapsGUI,"scale").min(0.0).max(5000.0).step(0.01);
     return function(){
         return shadowMapsGUI;
     };

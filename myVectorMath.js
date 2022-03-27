@@ -1,11 +1,10 @@
 function initViewProjectionMatrix() {
 
-    this.forwardDirection = glMatrix.vec4.fromValues(0.0, 0.0, -1.0);
+    this.forwardDirection = glMatrix.vec4.fromValues(-0.9267086982727051, 0.1860613077878952, -0.3264854848384857);
 
-    this.position = glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+    this.position = glMatrix.vec3.fromValues(964.2222900390625, -576.921875, 228.73336791992188);
 
     return (inputData, modelMatrix) => {
-
         let leftDirection = glMatrix.vec3.create();
         glMatrix.vec3.cross(leftDirection, [0, 1, 0], this.forwardDirection);
         glMatrix.vec3.normalize(leftDirection, leftDirection);
