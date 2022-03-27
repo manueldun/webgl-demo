@@ -73,7 +73,7 @@ void main()
       }
       shadowWeight/=(float(sampleEndSample-sampleStartSample)+1.0f)*(float(sampleEndSample-sampleStartSample)+1.0f);
 
-         out_color = vec4(clamp(dot(normal,light),0.0f,1.0f)*colorTexture*shadowWeight*0.9+colorTexture*0.01f,1.0f);
+         out_color = vec4(max(dot(normal,light),0.0f)*colorTexture*shadowWeight*0.9+colorTexture*0.01f,1.0f);
 
      }
      else{
