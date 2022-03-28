@@ -29,7 +29,21 @@
             font-size: 30px;
             
         }
-
+        #instructions{
+            font-size: 0.8rem;
+            position: absolute;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: row-reverse;
+            align-items: flex-end;
+            height: 100vh;
+        }
+        #instructions p{
+            width: 20rem;
+            margin: 0;
+            padding: 1.5rem;
+            background-color: rgba(255,255,255,0.5);
+        }
         canvas {
 
             position: absolute;
@@ -42,6 +56,13 @@
 <body>
     <div id="content">
         <canvas></canvas>
+        <div id="instructions">
+            <p >
+                <strong>Controls:</strong> To move forward, left, backward and right press "W", "A", "S" and "D" respectively and
+                to turn the camera drag the mouse with the left mouse button.<br><br>
+                Change the direction of the light at the top right.
+            </p>
+        </div>
         <div id="loading-message">Loading...</div>
     </div>
 </body>
