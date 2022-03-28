@@ -1,10 +1,6 @@
 async function main() {
     const canvasElement = document.getElementsByTagName("canvas")[0];
 
-    canvasElement.width = 1280;
-    canvasElement.style.width = 1280;
-    canvasElement.height = 720;
-    canvasElement.style.height = 720;
 
     const gl = canvasElement.getContext('webgl2', {antialias : false});
 
@@ -21,7 +17,7 @@ async function main() {
 
         //input logic
         const updateOnInput = initInputLogic(canvasElement);
-        const getUniformMatrices = initViewProjectionMatrix();
+        const getUniformMatrices = initViewProjectionMatrix(canvasElement);
         const updateGUIData = initGUIData();
 
         let sponzaDrawable = await loadSponza(gl);
@@ -38,6 +34,10 @@ async function main() {
 
             const shadowMapUniforms = getShadowMapUniforms(updateGUIData());
             const shadowMap = sponzaDrawable.drawShadowMap(shadowMapUniforms);
+            gl.viewport(0,0,canvasElement.offsetWidth,canvasElement.offsetHeight);
+            
+            canvasElement.width = canvasElement.offsetWidth;
+            canvasElement.height = canvasElement.offsetHeight;
             sponzaDrawable.draw(uniformMatrices,shadowMap,shadowMapUniforms);
             cubeDrawble.draw(uniformMatrices,shadowMapUniforms);
             quad(shadowMap);

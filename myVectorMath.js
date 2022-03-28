@@ -1,4 +1,4 @@
-function initViewProjectionMatrix() {
+function initViewProjectionMatrix(canvasElement) {
 
     this.forwardDirection = glMatrix.vec4.fromValues(-0.9267086982727051, 0.1860613077878952, -0.3264854848384857);
 
@@ -65,7 +65,17 @@ function initViewProjectionMatrix() {
 
 
         let projectionMatrix = glMatrix.mat4.create();
-        glMatrix.mat4.perspective(projectionMatrix, 10 * (180 / Math.PI), 1280 / 720, 0.1, 10000);
+        let screenRatio;
+        
+        if(canvasElement.offsetHeight<canvasElement.offsetWidth)
+        {
+            screenRatio =canvasElement.offsetWidth/canvasElement.offsetHeight;
+        }
+        else
+        {    
+            screenRatio =canvasElement.offsetHeight/canvasElement.offsetWidth;
+        }
+        glMatrix.mat4.perspective(projectionMatrix, 10 * (180 / Math.PI), screenRatio, 0.1, 10000);
 
 
         let mvpMatrix = glMatrix.mat4.create();

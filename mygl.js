@@ -465,7 +465,6 @@ async function loadGLTF(gl, path, gltfObj) {
         },
         draw: function (uniformMatrices,shadowMap,shadowMapUniforms) {
 
-            gl.viewport(0, 0, 1280, 720);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
