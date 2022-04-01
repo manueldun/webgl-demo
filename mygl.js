@@ -23,8 +23,8 @@ async function loadGLTF(gl, path, gltfObj) {
                 loadingModelProgress = ((e.loaded / e.total) * 100).toFixed(2);
 
 
-            loadingMessageElement.innerHTML = "Model: " + loadingModelProgress + " %" +
-                "Textures: " + (totalTextureProgress / gltfObj.images.length).toFixed(2) + "%";
+            loadingMessageElement.innerHTML = "<p>Model: " + loadingModelProgress + " % <br>" +
+                "Textures: " + (totalTextureProgress / gltfObj.images.length).toFixed(2) + "%</p>";
         });
     });
 
@@ -44,8 +44,8 @@ async function loadGLTF(gl, path, gltfObj) {
                 return acumulator + current.loadingProgress;
             }, 0);
 
-            loadingMessageElement.innerHTML = "Model: " + loadingModelProgress + " %" +
-                "Textures: " + (totalTextureProgress / gltfObj.images.length).toFixed(2) + "%";
+            loadingMessageElement.innerHTML = "<p>Model: " + loadingModelProgress + " % <br>" +
+                "Textures: " + (totalTextureProgress / gltfObj.images.length).toFixed(2) + "%</p>";
 
         });
 

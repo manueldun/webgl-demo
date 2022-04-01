@@ -10,7 +10,7 @@ async function main() {
 
     const loadingMessageElement = document.getElementById("loading-message");
     if (!gl) {
-        loadingMessageElement.innerHTML = "Your device does not support WebGL 2!";
+        loadingMessageElement.innerHTML = "<p>Your device does not support WebGL 2!</p>";
         return;
     }
     else {

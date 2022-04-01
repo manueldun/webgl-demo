@@ -25,15 +25,22 @@
             height: 100vh;
             font-family: sans-serif;
             text-align:center;
-            line-height:  720px;
-            font-size: 30px;
+            font-size: 1.5rem;
+            display:flex;
+            flex-direction: column;
             
+        }
+        #loading-message p {
+            align-items: center;
+            justify-content: center;
+            margin:auto;
         }
         #instructions{
             font-size: 0.8rem;
             position: absolute;
             font-family: sans-serif;
             bottom: 0;
+            
         }
         #instructions p{
             width: 20rem;
@@ -60,7 +67,7 @@
                 Change the direction of the light at the top right.
             </p>
         </div>
-        <div id="loading-message">Loading...</div>
+        <div id="loading-message"><p>Loading...</p></div>
     </div>
 </body>
 <script src="dependencies/gl-matrix-min.js"></script>
