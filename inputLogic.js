@@ -45,6 +45,17 @@ function initInputLogic(canvas) {
     let mouseDownY = 0.0;
     clickedMouseButton = false;
 
+    
+    canvas.addEventListener('touchstart', (e)=>{
+
+        e.preventDefault();
+        const touches = e.changedTouches;
+        clickedMouseButton = true;
+        mouseDownX = touches[0].pageX;
+        mouseDownY = touches[0].pageY;
+    }
+
+    );
     canvas.addEventListener('mousedown', function (e) {
         if (typeof e === 'object') {
             switch (e.button) {
@@ -57,6 +68,11 @@ function initInputLogic(canvas) {
         }
     });
 
+    canvas.addEventListener('touchend', (e)=>{
+        
+        e.preventDefault();
+        clickedMouseButton = false;
+    });
     canvas.addEventListener('mouseup', function (e) {
         if (typeof e === 'object') {
             switch (e.button) {
@@ -67,6 +83,19 @@ function initInputLogic(canvas) {
         }
     });
     let deltaMouse = { x: 0, y: 0 };
+    
+    canvas.addEventListener('touchmove', (e)=>{
+        
+        e.preventDefault();
+        
+        const touches = e.changedTouches;
+        if (clickedMouseButton === true) {
+            deltaMouse.x = (touches[0].pageX - mouseDownX) * 0.1;
+            mouseDownX = touches[0].pageX;
+            deltaMouse.y = (mouseDownY - touches[0].pageY) * 0.1;
+            mouseDownY = touches[0].pageY;
+        }
+    });
     canvas.addEventListener('mousemove', mouseButtonUp);
     function mouseButtonUp(e) {
         if (clickedMouseButton === true) {
