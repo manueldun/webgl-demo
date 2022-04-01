@@ -65,16 +65,8 @@ function initViewProjectionMatrix(canvasElement) {
 
 
         let projectionMatrix = glMatrix.mat4.create();
-        let screenRatio;
-        
-        if(canvasElement.offsetHeight<canvasElement.offsetWidth)
-        {
-            screenRatio =canvasElement.offsetWidth/canvasElement.offsetHeight;
-        }
-        else
-        {    
-            screenRatio =canvasElement.offsetHeight/canvasElement.offsetWidth;
-        }
+        let screenRatio=canvasElement.offsetWidth/canvasElement.offsetHeight;
+     
         glMatrix.mat4.perspective(projectionMatrix, 10 * (180 / Math.PI), screenRatio, 0.1, 10000);
 
 
