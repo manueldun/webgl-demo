@@ -167,7 +167,6 @@ function getDrawbleShadowMapCube(gl) {
         draw: function (uniforms,cubeUniforms) {
             gl.useProgram(program);
 
-            gl.viewport(0,0,1280,720);  
             gl.bindVertexArray(vaoBack);
 
             gl.uniformMatrix3fv(rotationMatrixUnifromLocation, false, cubeUniforms.rotationMatrix);

@@ -77,8 +77,7 @@ function renderQuad(gl)
     gl.deleteShader(vertexShader);
     gl.deleteShader(fragmentShader);
     return function(depthMap)
-    {
-        gl.viewport(0,0,1280,720);   
+    {  
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindVertexArray(null);
         gl.disable(gl.DEPTH_TEST);
