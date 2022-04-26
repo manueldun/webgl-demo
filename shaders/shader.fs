@@ -32,7 +32,7 @@ void main()
    {
       discard;
    }
-   vec3 colorTexture = vec3(colorTextureWithAlpha);
+   vec3 colorTexture = pow(colorTextureWithAlpha.rgb,vec3(2.2));
    vec3 normalTexture = (texture(normal_sampler,var_texCoord).rgb);
    normalTexture=(normalTexture.rgb-vec3(0.5f))*2.0f;
    vec3 normal = TBN*normalTexture;
