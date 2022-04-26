@@ -147,7 +147,7 @@ void main()
       }
       shadowWeight/=(float(sampleEndSample-sampleStartSample)+1.0f)*(float(sampleEndSample-sampleStartSample)+1.0f);
 
-      out_color = vec4(Lo*shadowWeight,1.0);
+      out_color = vec4(Lo*shadowWeight+albedo*0.001,1.0);
 
      }
      else{
