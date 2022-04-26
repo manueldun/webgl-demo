@@ -5,11 +5,11 @@ layout(location = 1) in vec3 attrib_normal;
 layout(location = 2) in vec2 attrib_texCoord;
 layout(location = 3) in vec4 attrib_tangent;
 
-uniform mat4 mvp;
-uniform mat3 rotationMatrix;
 uniform mat4 shadowMapMatrix;
+uniform mat3 rotationMatrix;
+uniform mat4 mvp;
 
-
+out vec3 var_position;
 out vec2 var_texCoord;
 out vec3 var_normal;
 out vec3 var_shadowMapCoord;
@@ -21,5 +21,6 @@ void main()
     var_normal = attrib_normal;
     var_texCoord = attrib_texCoord;
     var_tangent = attrib_tangent.xyz;
+    var_position = attrib_position;
     gl_Position = mvp*vec4(attrib_position,1.0);
 }

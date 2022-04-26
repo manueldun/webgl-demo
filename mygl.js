@@ -283,6 +283,13 @@ async function loadGLTF(gl, path, gltfObj) {
 
         drawble.glTexture = glTextures[imageIndex];
 
+        if(material.pbrMetallicRoughness.metallicRoughnessTexture!=undefined)
+        {
+            const metallicRoughnessTextureIndex = material.pbrMetallicRoughness.metallicRoughnessTexture.index;
+            drawble.glMetallicRoughnessTexture = glTextures[metallicRoughnessTextureIndex];
+        }
+
+
 
         return drawble;
 
@@ -320,14 +327,19 @@ async function loadGLTF(gl, path, gltfObj) {
     gl.deleteShader(vertexShader);
     gl.deleteShader(fragmentShader);
 
-    const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
-    const rotationMatrixUniform = gl.getUniformLocation(program, "rotationMatrix");
-    const colorSamplerUniformLocation = gl.getUniformLocation(program, "color_sampler");
+
     const normalSamplerUniformLocation = gl.getUniformLocation(program, "normal_sampler");
     const shadowMapSamplerUniformLocation = gl.getUniformLocation(program, "shadowMap_sampler");
     const projectedShadowMapMatrixUniformLocation = gl.getUniformLocation(program, "shadowMapMatrix");
     const lightOriginUniformLocation = gl.getUniformLocation(program, "shadowMapPosition");
+    const rotationMatrixUniform = gl.getUniformLocation(program, "rotationMatrix");
+    const colorSamplerUniformLocation = gl.getUniformLocation(program, "color_sampler");
+    const cameraPositionUniformLocation = gl.getUniformLocation(program, "cameraPosition");
+    const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
+    const metallicRoughnessUniformLocation = gl.getUniformLocation(program, "metallicRoughness");
 
+
+    
     const depthTexture = gl.createTexture();
     const fb = gl.createFramebuffer();
 
@@ -471,15 +483,19 @@ async function loadGLTF(gl, path, gltfObj) {
 
             gl.useProgram(program);
             drawbles.map((drawble) => {
-                gl.uniformMatrix3fv(rotationMatrixUniform, false, shadowMapUniforms.rotationMatrix);
-                gl.uniformMatrix4fv(mvpUniformLocation, false, uniformMatrices.mvpMatrix);
-                gl.uniformMatrix4fv(projectedShadowMapMatrixUniformLocation, false, shadowMapUniforms.inverse);
 
-                gl.uniform3fv(lightOriginUniformLocation, shadowMapUniforms.position);
-                
-                gl.uniform1i(colorSamplerUniformLocation, 0);
-                gl.uniform1i(shadowMapSamplerUniformLocation, 1);
+
                 gl.uniform1i(normalSamplerUniformLocation, 2);
+                gl.uniform1i(shadowMapSamplerUniformLocation, 1);
+                gl.uniformMatrix4fv(projectedShadowMapMatrixUniformLocation, false, shadowMapUniforms.inverse);
+                gl.uniform3fv(lightOriginUniformLocation, shadowMapUniforms.position);
+                gl.uniformMatrix3fv(rotationMatrixUniform, false, shadowMapUniforms.rotationMatrix);
+                gl.uniform1i(colorSamplerUniformLocation, 0);
+                gl.uniform3fv(cameraPositionUniformLocation, uniformMatrices.cameraPosition);
+                gl.uniformMatrix4fv(mvpUniformLocation, false, uniformMatrices.mvpMatrix);
+                gl.uniform1i(metallicRoughnessUniformLocation, 3);
+
+                
 
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
@@ -490,7 +506,12 @@ async function loadGLTF(gl, path, gltfObj) {
                     gl.activeTexture(gl.TEXTURE2);
                     gl.bindTexture(gl.TEXTURE_2D, drawble.glNormalTexture);
                 }
-
+                
+                if(drawble.glNormalTexture!=undefined)
+                {
+                    gl.activeTexture(gl.TEXTURE3);
+                    gl.bindTexture(gl.TEXTURE_2D, drawble.glMetallicRoughnessTexture);
+                }
                 gl.bindVertexArray(drawble.vao);
 
                 gl.enableVertexAttribArray(positionAttributeLocation);
