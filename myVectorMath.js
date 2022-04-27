@@ -137,9 +137,6 @@ function initViewProjectionMatrix(canvasElement) {
     };
 }
 function getRotationMatrixFromPolarAngles(verticalAngle, horizontalAngle) {
-    let verticalRadianAngle = glMatrix.glMatrix.toRadian(verticalAngle);
-    let horizontalRadianAngle = glMatrix.glMatrix.toRadian(horizontalAngle);
-
     const sphericalQuaternion = glMatrix.quat.create();
     glMatrix.quat.fromEuler(
         sphericalQuaternion,

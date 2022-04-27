@@ -12,13 +12,14 @@ function getModelMatrix(gltfObj) {
     return modelMatrix;
 }
 
-async function loadGLTF(gl, path, gltfObj) {
-    console.log(gltfObj);
+async function loadGLTF(gl, path) {
+    const currentDirectory = path.slice(0, path.lastIndexOf("/") + 1);
+    const gltfObj = JSON.parse(await getStringFile(path));
     const loadingMessageElement = document.getElementById("loading-message");
     let loadingModelProgress = 0;
     let totalTextureProgress = 0;
     let binFileBuffersPromises = gltfObj.buffers.map((buffer) => {
-        return getBinaryFile(path, buffer.uri, (e) => {
+        return getBinaryFile(currentDirectory + buffer.uri, (e) => {
             if (e.lengthComputable)
                 loadingModelProgress = ((e.loaded / e.total) * 100).toFixed(2);
 
@@ -36,25 +37,30 @@ async function loadGLTF(gl, path, gltfObj) {
         image.loadingProgress = 0;
         const imageURI = image.uri;
 
-        const colorImagePromise = loadImage(path, imageURI, (e) => {
-            if (e.lengthComputable)
-                image.loadingProgress = parseInt((e.loaded / e.total) * 100);
+        const colorImagePromise = loadImage(
+            currentDirectory + imageURI,
+            (e) => {
+                if (e.lengthComputable)
+                    image.loadingProgress = parseInt(
+                        (e.loaded / e.total) * 100
+                    );
 
-            totalTextureProgress = gltfObj.images.reduce(
-                (acumulator, current) => {
-                    return acumulator + current.loadingProgress;
-                },
-                0
-            );
+                totalTextureProgress = gltfObj.images.reduce(
+                    (acumulator, current) => {
+                        return acumulator + current.loadingProgress;
+                    },
+                    0
+                );
 
-            loadingMessageElement.innerHTML =
-                "<p>Model: " +
-                loadingModelProgress +
-                " % <br>" +
-                "Textures: " +
-                (totalTextureProgress / gltfObj.images.length).toFixed(2) +
-                "%</p>";
-        });
+                loadingMessageElement.innerHTML =
+                    "<p>Model: " +
+                    loadingModelProgress +
+                    " % <br>" +
+                    "Textures: " +
+                    (totalTextureProgress / gltfObj.images.length).toFixed(2) +
+                    "%</p>";
+            }
+        );
 
         const colorImage = await colorImagePromise;
         const glTexture = gl.createTexture();
@@ -342,7 +348,7 @@ async function loadGLTF(gl, path, gltfObj) {
                 drawble.glNormalTexture = glTextures[imageNormalIndex];
             }
 
-            drawble.glTexture = glTextures[imageIndex];
+            drawble.glAlbedoTexture = glTextures[imageIndex];
 
             if (
                 material.pbrMetallicRoughness.metallicRoughnessTexture !=
@@ -361,7 +367,7 @@ async function loadGLTF(gl, path, gltfObj) {
 
     const drawbles = await Promise.all(drawblesPromises);
     const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    const vertexShaderSource = await getStringFile("/shaders/", "shader.vs");
+    const vertexShaderSource = await getStringFile("/shaders/shader.vs");
     gl.shaderSource(vertexShader, vertexShaderSource);
     gl.compileShader(vertexShader);
     let success = gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS);
@@ -370,7 +376,7 @@ async function loadGLTF(gl, path, gltfObj) {
     }
 
     const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    const fragmentShaderSource = await getStringFile("/shaders/", "shader.fs");
+    const fragmentShaderSource = await getStringFile("/shaders/shader.fs");
     gl.shaderSource(fragmentShader, fragmentShaderSource);
     gl.compileShader(fragmentShader);
     success = gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS);
@@ -442,8 +448,8 @@ async function loadGLTF(gl, path, gltfObj) {
         0, // border
         gl.DEPTH_COMPONENT, // format
         gl.FLOAT, // type
-        null
-    ); // data
+        null // data
+    );
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -454,8 +460,8 @@ async function loadGLTF(gl, path, gltfObj) {
         gl.DEPTH_ATTACHMENT, // attachment point
         gl.TEXTURE_2D, // texture target
         depthTexture, // texture
-        0
-    ); // mip level
+        0 // mip level
+    );
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -534,24 +540,16 @@ async function loadGLTF(gl, path, gltfObj) {
         modelMatrix: getModelMatrix(gltfObj),
         drawShadowMap: function (uniforms) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-            //gl.clearColor(1.0,1.0,1.0,1.0);
-            //gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
-            //gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([100, 0, 0, 0]));
 
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.viewport(0, 0, depthTextureSize, depthTextureSize);
             gl.useProgram(shadowMapProgram);
             drawbles.map((drawble) => {
-                //gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
-                //gl.uniform3fv(lightShadowMapPositionUniform, uniforms.position);
-                //gl.uniformMatrix3fv(rotationShadowMapMatrixUniform, false, uniforms.rotationMatrix);
-
                 gl.uniformMatrix4fv(
                     shadowMapMatrixUniform,
                     false,
                     uniforms.inverse
                 );
-                //gl.uniform1f(scaleShadowMapUniform, uniforms.scale);
 
                 gl.bindVertexArray(drawble.vao);
 
@@ -602,7 +600,7 @@ async function loadGLTF(gl, path, gltfObj) {
                 gl.uniform1i(metallicRoughnessUniformLocation, 3);
 
                 gl.activeTexture(gl.TEXTURE0);
-                gl.bindTexture(gl.TEXTURE_2D, drawble.glTexture);
+                gl.bindTexture(gl.TEXTURE_2D, drawble.glAlbedoTexture);
                 gl.activeTexture(gl.TEXTURE1);
                 gl.bindTexture(gl.TEXTURE_2D, shadowMap);
                 if (drawble.glNormalTexture != undefined) {
@@ -639,6 +637,5 @@ async function loadGLTF(gl, path, gltfObj) {
     };
 }
 async function loadSponza(gl) {
-    const objFile = JSON.parse(await getStringFile("sponza/", "Sponza.gltf"));
-    return loadGLTF(gl, "sponza/", objFile);
+    return loadGLTF(gl, "sponza/Sponza.gltf");
 }

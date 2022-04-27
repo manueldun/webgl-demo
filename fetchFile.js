@@ -1,7 +1,7 @@
-function getStringFile(path, fileName) {
+function getStringFile(fileName) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("GET", window.location.href + path + fileName, true);
+        xhr.open("GET", window.location.href + fileName, true);
         xhr.onload = function () {
             if (this.status >= 200 && this.status < 300) {
                 resolve(xhr.response);
@@ -21,14 +21,14 @@ function getStringFile(path, fileName) {
         xhr.send();
     });
 }
-function getBinaryFile(path, fileName, onProgress) {
+function getBinaryFile(fileName, onProgress) {
     return new Promise((resolve, reject) => {
         var oReq = new XMLHttpRequest();
-        oReq.open("GET", window.location.href + path + fileName, true);
+        oReq.open("GET", window.location.href + fileName, true);
         oReq.responseType = "arraybuffer";
 
         oReq.onload = function (oEvent) {
-            var arrayBuffer = oReq.response; // Note: not oReq.responseText
+            var arrayBuffer = oReq.response;
             if (arrayBuffer) {
                 resolve(oReq.response);
             }
@@ -45,7 +45,7 @@ function getBinaryFile(path, fileName, onProgress) {
 }
 
 Image.prototype.completedPercentage = 0;
-function loadImage(path, fileName, onProgress) {
+function loadImage(fileName, onProgress) {
     return new Promise((resolve, reject) => {
         Image.prototype.load = function (url, callback) {
             var thisImg = this,
@@ -60,7 +60,6 @@ function loadImage(path, fileName, onProgress) {
                 var h = xmlHTTP.getAllResponseHeaders(),
                     m = h.match(/^Content-Type\:\s*(.*?)$/im),
                     mimeType = m[1] || "image/png";
-                // Remove your progress bar or whatever here. Load is done.
 
                 var blob = new Blob([this.response], { type: mimeType });
                 thisImg.src = window.URL.createObjectURL(blob);
@@ -70,19 +69,17 @@ function loadImage(path, fileName, onProgress) {
             xmlHTTP.onprogress = onProgress;
 
             xmlHTTP.onloadstart = function () {
-                // Display your progress bar here, starting at 0
                 thisImg.completedPercentage = 0;
             };
 
             xmlHTTP.onloadend = function () {
-                // You can also remove your progress bar here, if you like.
                 thisImg.completedPercentage = 100;
             };
 
             xmlHTTP.send();
         };
         var img = new Image();
-        img.load(window.location.href + path + fileName);
+        img.load(window.location.href + fileName);
 
         img.onload = () => resolve(img);
     });

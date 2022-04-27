@@ -1,12 +1,12 @@
 function getDrawbleShadowMapCube(gl) {
     const positionAttributeLocation = 0;
-    const vaoBack = gl.createVertexArray();
-    gl.bindVertexArray(vaoBack);
+    const vaoBackCubePart = gl.createVertexArray();
+    gl.bindVertexArray(vaoBackCubePart);
     gl.enableVertexAttribArray(positionAttributeLocation);
     const glBackBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, glBackBuffer);
     const backPositionArray = [
-        -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0,
+        -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
     ];
     gl.bufferData(
         gl.ARRAY_BUFFER,
@@ -37,19 +37,36 @@ function getDrawbleShadowMapCube(gl) {
         gl.STATIC_DRAW
     );
 
-    const vaoMiddle = gl.createVertexArray();
-    gl.bindVertexArray(vaoMiddle);
+    const vaoMiddleCubePart = gl.createVertexArray();
+    gl.bindVertexArray(vaoMiddleCubePart);
     gl.enableVertexAttribArray(positionAttributeLocation);
     const glMiddleBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, glMiddleBuffer);
     const middlePositionArray = [
-        -1.0, 1.0, 1.0, -1.0, -1.0, 1.0,
-
-        1.0, 1.0, 1.0, 1.0, -1.0, 1.0,
-
-        1.0, 1.0, -1.0, 1.0, -1.0, -1.0,
-
-        -1.0, 1.0, -1.0, -1.0, -1.0, -1.0,
+        -1.0,
+        1.0,
+        -1.0, //0
+        -1.0,
+        1.0,
+        1.0, //1
+        1.0,
+        1.0,
+        -1.0, //2
+        1.0,
+        1.0,
+        1.0, //3
+        1.0,
+        -1.0,
+        -1.0, //4
+        1.0,
+        -1.0,
+        1.0, //5
+        -1.0,
+        -1.0,
+        -1.0, //6
+        -1.0,
+        -1.0,
+        1.0, //7
     ];
     gl.bufferData(
         gl.ARRAY_BUFFER,
@@ -82,13 +99,13 @@ function getDrawbleShadowMapCube(gl) {
         gl.STATIC_DRAW
     );
 
-    const vaoFar = gl.createVertexArray();
-    gl.bindVertexArray(vaoFar);
+    const vaoFarCubePart = gl.createVertexArray();
+    gl.bindVertexArray(vaoFarCubePart);
     gl.enableVertexAttribArray(positionAttributeLocation);
     const glFarBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, glFarBuffer);
     const farPositionArray = [
-        -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
+        -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0,
     ];
     gl.bufferData(
         gl.ARRAY_BUFFER,
@@ -204,7 +221,7 @@ function getDrawbleShadowMapCube(gl) {
         draw: function (uniforms, cubeUniforms) {
             gl.useProgram(program);
 
-            gl.bindVertexArray(vaoBack);
+            gl.bindVertexArray(vaoBackCubePart);
 
             gl.uniformMatrix3fv(
                 rotationMatrixUnifromLocation,
@@ -225,7 +242,7 @@ function getDrawbleShadowMapCube(gl) {
 
             gl.drawElements(gl.LINE_LOOP, 4, gl.UNSIGNED_SHORT, 0);
 
-            gl.bindVertexArray(vaoMiddle);
+            gl.bindVertexArray(vaoMiddleCubePart);
 
             gl.uniformMatrix3fv(
                 rotationMatrixUnifromLocation,
@@ -246,7 +263,7 @@ function getDrawbleShadowMapCube(gl) {
 
             gl.drawElements(gl.LINES, 8, gl.UNSIGNED_SHORT, 0);
 
-            gl.bindVertexArray(vaoFar);
+            gl.bindVertexArray(vaoFarCubePart);
 
             gl.uniformMatrix3fv(
                 rotationMatrixUnifromLocation,
