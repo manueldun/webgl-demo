@@ -83,7 +83,7 @@ void main()
    normalTexture=(normalTexture.rgb-vec3(0.5f))*2.0f;
    vec3 normal = TBN*normalTexture;
 
-   vec3 radiance = vec3(1.0);
+   vec3 radiance = vec3(5.0);
    // cook-torrance brdf
    
    vec3 F0 = vec3(0.04); 
@@ -91,7 +91,7 @@ void main()
 
    vec3 N = normalize(normal);
    vec3 V = normalize(-cameraPosition - var_position);
-   vec3 L = light*2.0;
+   vec3 L = light;
    vec3 H = normalize(V + L);
    vec3 Lo = vec3(0.0);
    float NDF = DistributionGGX(N, H, roughness);        
