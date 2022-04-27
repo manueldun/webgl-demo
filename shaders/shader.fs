@@ -91,7 +91,7 @@ void main()
 
    vec3 N = normalize(normal);
    vec3 V = normalize(-cameraPosition - var_position);
-   vec3 L = light;
+   vec3 L = light*2.0;
    vec3 H = normalize(V + L);
    vec3 Lo = vec3(0.0);
    float NDF = DistributionGGX(N, H, roughness);        
