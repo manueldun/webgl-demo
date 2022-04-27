@@ -1,83 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Webgl Demo</title>
+        <style>
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            #content {
+                position: relative;
+                margin: auto;
+                width: 100vw;
+                height: 100vh;
+            }
+            #loading-message {
+                position: absolute;
+                background-color: black;
+                color: white;
+                width: 100vw;
+                height: 100vh;
+                font-family: sans-serif;
+                text-align: center;
+                font-size: 1.5rem;
+                display: flex;
+                flex-direction: column;
+            }
+            #loading-message p {
+                align-items: center;
+                justify-content: center;
+                margin: auto;
+            }
+            #instructions {
+                font-size: 0.8rem;
+                position: absolute;
+                font-family: sans-serif;
+                bottom: 0;
+            }
+            #instructions p {
+                width: 20rem;
+                margin: 0;
+                padding: 1.5rem;
+                background-color: rgba(255, 255, 255, 0.5);
+            }
+            canvas {
+                position: absolute;
+                width: 100vw;
+                height: 100vh;
+            }
+        </style>
+    </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webgl Demo</title>
-    <style>
-        body{
-            padding:0;
-            margin:0;
-        }
-        #content
-        {
-            position: relative;
-            margin: auto;
-            width: 100vw;
-            height: 100vh;
-        }
-        #loading-message {
-            position: absolute;
-            background-color: black;
-            color: white;
-            width: 100vw;
-            height: 100vh;
-            font-family: sans-serif;
-            text-align:center;
-            font-size: 1.5rem;
-            display:flex;
-            flex-direction: column;
-            
-        }
-        #loading-message p {
-            align-items: center;
-            justify-content: center;
-            margin:auto;
-        }
-        #instructions{
-            font-size: 0.8rem;
-            position: absolute;
-            font-family: sans-serif;
-            bottom: 0;
-            
-        }
-        #instructions p{
-            width: 20rem;
-            margin: 0;
-            padding: 1.5rem;
-            background-color: rgba(255,255,255,0.5);
-        }
-        canvas {
-
-            position: absolute;
-            width: 100vw;
-            height: 100vh;
-        }
-    </style>
-</head>
-
-<body>
-    <div id="content">
-        <canvas></canvas>
-        <div id="instructions">
-            <p >
-                <strong>Controls:</strong> To move forward, left, backward and right press "W", "A", "S" and "D" respectively and
-                to turn the camera drag the mouse with the left mouse button.<br><br>
-                Change the direction of the light at the top right.
-            </p>
+    <body>
+        <div id="content">
+            <canvas></canvas>
+            <div id="instructions">
+                <p>
+                    <strong>Controls:</strong> To move forward, left, backward
+                    and right press "W", "A", "S" and "D" respectively and to
+                    turn the camera drag the mouse with the left mouse
+                    button.<br /><br />
+                    Change the direction of the light at the top right.
+                </p>
+            </div>
+            <div id="loading-message"><p>Loading...</p></div>
         </div>
-        <div id="loading-message"><p>Loading...</p></div>
-    </div>
-</body>
-<script src="dependencies/gl-matrix-min.js"></script>
-<script src="dependencies/dat.gui.min.js"></script>
-<script src="myVectorMath.js"></script>
-<script src="inputLogic.js"></script>
-<script src="drawCube.js"></script>
-<script src="mygl.js"></script>
-<script src="fetchFile.js"></script>
-<script src="shadowMap.js"></script>
-<script src="script.js"></script>
-
+    </body>
+    <script src="dependencies/gl-matrix-min.js"></script>
+    <script src="dependencies/dat.gui.min.js"></script>
+    <script src="myVectorMath.js"></script>
+    <script src="inputLogic.js"></script>
+    <script src="drawCube.js"></script>
+    <script src="mygl.js"></script>
+    <script src="fetchFile.js"></script>
+    <script src="shadowMap.js"></script>
+    <script src="script.js"></script>
 </html>

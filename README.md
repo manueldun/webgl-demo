@@ -1,4 +1,5 @@
 # WebGL Demo
+
 This demo is created as a portfolio for a rendering programing CV.
 Live demo is [here](https://manueldun.github.io/webgl-demo), beware of download size (50+ MB).
 
@@ -6,10 +7,10 @@ https://user-images.githubusercontent.com/7586239/165562805-e73e7596-cc46-4994-a
 
 ## Features
 
-- Physically based shading.
-- PCF Shadowmaps.
-- First Person Controls with WASD keys and mouse dragging.
-- Normal Maps
+-   Physically based shading.
+-   PCF Shadowmaps.
+-   First Person Controls with WASD keys and mouse dragging.
+-   Normal Maps
 
 ## Screenshots
 

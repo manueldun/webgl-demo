@@ -1,7 +1,5 @@
-function renderQuad(gl)
-{
-    const vertexShaderSource =
-        `#version 300 es
+function renderQuad(gl) {
+    const vertexShaderSource = `#version 300 es
     #pragma vscode_glsllint_stage : vert
 
     out vec2 var_coords;
@@ -31,8 +29,7 @@ function renderQuad(gl)
         var_coords= coords[gl_VertexID];
     }
     `;
-    const fragmentShaderSource =
-        `#version 300 es
+    const fragmentShaderSource = `#version 300 es
     precision highp float;
     precision highp usampler2D;
     #pragma vscode_glsllint_stage : frag
@@ -69,23 +66,21 @@ function renderQuad(gl)
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
 
-
     success = gl.getProgramParameter(program, gl.LINK_STATUS);
     if (!success) {
         console.log(gl.getProgramInfoLog(program));
     }
     gl.deleteShader(vertexShader);
     gl.deleteShader(fragmentShader);
-    return function(depthMap)
-    {  
+    return function (depthMap) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindVertexArray(null);
         gl.disable(gl.DEPTH_TEST);
         gl.useProgram(program);
-        
+
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, depthMap)
-        gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+        gl.bindTexture(gl.TEXTURE_2D, depthMap);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         gl.enable(gl.DEPTH_TEST);
     };
 }
