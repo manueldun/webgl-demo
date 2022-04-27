@@ -152,13 +152,19 @@ function initGUIData()
         "position z":0.0,
         "vertical angle":73.46,
         "horizontal angle":54.25,
-        "scale":1900.0
+        "scale":1900.0,
+        "Animate light":false
     }
     
     const gui = new dat.GUI();
-    gui.add(shadowMapsGUI,"vertical angle").min(0.0).max(180.0).step(0.0001);
+    gui.add(shadowMapsGUI,"vertical angle").min(0.0).max(180.0).step(0.0001).listen();
     gui.add(shadowMapsGUI,"horizontal angle").min(0.0).max(180.0).step(0.0001);
+    gui.add(shadowMapsGUI,"Animate light");
     return function(){
+        if(shadowMapsGUI["Animate light"])
+        {
+            shadowMapsGUI["vertical angle"]=Math.sin(Date.now()/500.0)*20.0+80.0;
+        }
         return shadowMapsGUI;
     };
 }
