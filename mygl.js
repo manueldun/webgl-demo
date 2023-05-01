@@ -11,7 +11,90 @@ function getModelMatrix(gltfObj) {
     }
     return modelMatrix;
 }
+function createTexture(gl,width,height,internalFormat,format,type)
+{
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    //gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+    gl.texImage2D(
+        gl.TEXTURE_2D, // target
+        0, // mip level
+        internalFormat,//gl.DEPTH_COMPONENT32F, // internal format
+        width, // width
+        height, // height
+        0, // border
+        format,//gl.DEPTH_COMPONENT, // format
+        type, //gl.FLOAT// type
+        null // data
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return {width:width,height:height,texture:texture};
+}
+function createDepthTexture(gl,width,height)
+{
+    return createTexture(gl,width,height,gl.DEPTH_COMPONENT32F,gl.DEPTH_COMPONENT,gl.FLOAT); 
+}
+function createFramebuffer(gl,texture){
+    const fb = gl.createFramebuffer();
 
+    // bind the framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+
+
+
+    gl.framebufferTexture2D(
+        gl.FRAMEBUFFER, // target
+        gl.DEPTH_ATTACHMENT, // attachment point
+        gl.TEXTURE_2D, // texture target
+        texture.texture, // texture
+        0 // mip level
+    );
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    const completeness = gl.checkFramebufferStatus(fb);
+    if(completeness!=gl.COMPLETE)
+    {
+        console.log(completeness);
+    }
+    return {frameBuffer:fb,texture:texture};
+
+}
+function compileShaderProgram(gl,vertexShaderSource,fragmentShaderSource)
+{    
+
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, vertexShaderSource);
+    gl.compileShader(vertexShader);
+    let success = gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS);
+    if (!success) {
+        console.log(gl.getShaderInfoLog(vertexShader));
+    }
+
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    gl.compileShader(fragmentShader);
+    success = gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS);
+    if (!success) {
+        console.log(gl.getShaderInfoLog(fragmentShader));
+    }
+
+    let program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+
+    success = gl.getProgramParameter(program, gl.LINK_STATUS);
+    if (!success) {
+        console.log(gl.getProgramInfoLog(program));
+    }
+    gl.deleteShader(vertexShader);
+    gl.deleteShader(fragmentShader);
+    return program;
+    
+}
 async function loadGLTF(gl, path) {
     const currentDirectory = path.slice(0, path.lastIndexOf("/") + 1);
     const gltfObj = JSON.parse(await getStringFile(path));
@@ -366,35 +449,12 @@ async function loadGLTF(gl, path) {
     );
 
     const drawbles = await Promise.all(drawblesPromises);
-    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
     const vertexShaderSource = await getStringFile("/shaders/shader.vs");
-    gl.shaderSource(vertexShader, vertexShaderSource);
-    gl.compileShader(vertexShader);
-    let success = gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS);
-    if (!success) {
-        console.log(gl.getShaderInfoLog(vertexShader));
-    }
 
-    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
     const fragmentShaderSource = await getStringFile("/shaders/shader.fs");
-    gl.shaderSource(fragmentShader, fragmentShaderSource);
-    gl.compileShader(fragmentShader);
-    success = gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS);
-    if (!success) {
-        console.log(gl.getShaderInfoLog(fragmentShader));
-    }
 
-    let program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
+    const program = compileShaderProgram(gl,vertexShaderSource,fragmentShaderSource);
 
-    success = gl.getProgramParameter(program, gl.LINK_STATUS);
-    if (!success) {
-        console.log(gl.getProgramInfoLog(program));
-    }
-    gl.deleteShader(vertexShader);
-    gl.deleteShader(fragmentShader);
 
     const normalSamplerUniformLocation = gl.getUniformLocation(
         program,
@@ -430,94 +490,37 @@ async function loadGLTF(gl, path) {
         "metallicRoughness"
     );
 
-    const depthTexture = gl.createTexture();
-    const fb = gl.createFramebuffer();
-
-    // bind the framebuffer
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-
+    
     const depthTextureSize = 2048;
-    gl.bindTexture(gl.TEXTURE_2D, depthTexture);
-    //gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
-    gl.texImage2D(
-        gl.TEXTURE_2D, // target
-        0, // mip level
-        gl.DEPTH_COMPONENT32F, // internal format
-        depthTextureSize, // width
-        depthTextureSize, // height
-        0, // border
-        gl.DEPTH_COMPONENT, // format
-        gl.FLOAT, // type
-        null // data
-    );
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const shadowTexture = createDepthTexture(gl,depthTextureSize,depthTextureSize);
+    
+    const shadowMapFrameBuffer = createFramebuffer(gl,shadowTexture);
 
-    gl.framebufferTexture2D(
-        gl.FRAMEBUFFER, // target
-        gl.DEPTH_ATTACHMENT, // attachment point
-        gl.TEXTURE_2D, // texture target
-        depthTexture, // texture
-        0 // mip level
-    );
+    const vertexShaderShadowMap = `#version 300 es
+    #pragma vscode_glsllint_stage : vert
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    layout(location = 0) in vec3 attrib_position;
 
-    let shadowMapProgram = gl.createProgram();
+    
+    uniform mat4 shadowMapMatrix;
+
+    void main()
     {
-        const vertexShaderSource = `#version 300 es
-        #pragma vscode_glsllint_stage : vert
-
-        layout(location = 0) in vec3 attrib_position;
-
-        
-        uniform mat4 shadowMapMatrix;
-
-        void main()
-        {
-            gl_Position = shadowMapMatrix*vec4(attrib_position,1.0);
-        }
-        `;
-        const fragmentShaderSource = `#version 300 es
-        precision highp float;
-        #pragma vscode_glsllint_stage : frag
-        
-        
-        out vec4 out_color;
-        void main()
-        {
-            out_color = vec4(0.0,0.0,0.0,1.0);
-        }
-        `;
-        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vertexShader, vertexShaderSource);
-        gl.compileShader(vertexShader);
-        let success = gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS);
-        if (!success) {
-            console.log(gl.getShaderInfoLog(vertexShader));
-        }
-
-        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fragmentShader, fragmentShaderSource);
-        gl.compileShader(fragmentShader);
-        success = gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS);
-        if (!success) {
-            console.log(gl.getShaderInfoLog(fragmentShader));
-        }
-
-        gl.attachShader(shadowMapProgram, vertexShader);
-        gl.attachShader(shadowMapProgram, fragmentShader);
-        gl.linkProgram(shadowMapProgram);
-
-        success = gl.getProgramParameter(shadowMapProgram, gl.LINK_STATUS);
-        if (!success) {
-            console.log(gl.getProgramInfoLog(shadowMapProgram));
-        }
-        gl.deleteShader(vertexShader);
-        gl.deleteShader(fragmentShader);
+        gl_Position = shadowMapMatrix*vec4(attrib_position,1.0);
     }
+    `;
+    const fragmentShaderShadowMap = `#version 300 es
+    precision highp float;
+    #pragma vscode_glsllint_stage : frag
+    
+    
+    out vec4 out_color;
+    void main()
+    {
+        out_color = vec4(0.0,0.0,0.0,1.0);
+    }
+    `;
+    const shadowMapProgram = compileShaderProgram(gl,vertexShaderShadowMap,fragmentShaderShadowMap);
 
     const lightShadowMapPositionUniform = gl.getUniformLocation(
         shadowMapProgram,
@@ -535,11 +538,10 @@ async function loadGLTF(gl, path) {
         shadowMapProgram,
         "shadowMapMatrix"
     );
-
     return {
         modelMatrix: getModelMatrix(gltfObj),
         drawShadowMap: function (uniforms) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, shadowMapFrameBuffer.frameBuffer);
 
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.viewport(0, 0, depthTextureSize, depthTextureSize);
@@ -563,7 +565,10 @@ async function loadGLTF(gl, path) {
             });
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            return depthTexture;
+            return shadowMapFrameBuffer.texture;
+        },
+        drawNormal:function(){
+            
         },
         draw: function (uniformMatrices, shadowMap, shadowMapUniforms) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -602,7 +607,7 @@ async function loadGLTF(gl, path) {
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, drawble.glAlbedoTexture);
                 gl.activeTexture(gl.TEXTURE1);
-                gl.bindTexture(gl.TEXTURE_2D, shadowMap);
+                gl.bindTexture(gl.TEXTURE_2D, shadowMap.texture);
                 if (drawble.glNormalTexture != undefined) {
                     gl.activeTexture(gl.TEXTURE2);
                     gl.bindTexture(gl.TEXTURE_2D, drawble.glNormalTexture);
