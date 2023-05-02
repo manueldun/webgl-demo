@@ -33,32 +33,58 @@ function createTexture(gl,width,height,internalFormat,format,type)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     return {width:width,height:height,texture:texture};
 }
-function createDepthTexture(gl,width,height)
+function createDepthTextureFramebuffer(gl,width,height)
 {
-    return createTexture(gl,width,height,gl.DEPTH_COMPONENT32F,gl.DEPTH_COMPONENT,gl.FLOAT); 
-}
-function createFramebuffer(gl,texture){
-    const fb = gl.createFramebuffer();
+    const vertexShaderShadowMap = `#version 300 es
+    #pragma vscode_glsllint_stage : vert
 
+    layout(location = 0) in vec3 attrib_position;
+
+    
+    uniform mat4 shadowMapMatrix;
+
+    void main()
+    {
+        gl_Position = shadowMapMatrix*vec4(attrib_position,1.0);
+    }
+    `;
+    const fragmentShaderShadowMap = `#version 300 es
+    precision highp float;
+    #pragma vscode_glsllint_stage : frag
+    
+    
+    out vec4 out_color;
+    void main()
+    {
+        out_color = vec4(0.0,0.0,0.0,1.0);
+    }
+    `;
+    const shadowMapProgram = compileShaderProgram(gl,vertexShaderShadowMap,fragmentShaderShadowMap);
+    const texture = createTexture(gl,width,height,gl.DEPTH_COMPONENT32F,gl.DEPTH_COMPONENT,gl.FLOAT);
+    return {
+        ...createFramebuffer(gl,texture,gl.DEPTH_ATTACHMENT),
+        program:shadowMapProgram}; 
+}
+function createFramebuffer(gl,texture,attachmentPoint){
+    const fb = gl.createFramebuffer();
+    console.log({texture});
     // bind the framebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-
-
-
     gl.framebufferTexture2D(
         gl.FRAMEBUFFER, // target
-        gl.DEPTH_ATTACHMENT, // attachment point
+        attachmentPoint,//gl.DEPTH_ATTACHMENT, // attachment point
         gl.TEXTURE_2D, // texture target
         texture.texture, // texture
         0 // mip level
     );
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     const completeness = gl.checkFramebufferStatus(fb);
     if(completeness!=gl.COMPLETE)
     {
-        console.log(completeness);
+        console.log("frame buffer incomplete");
     }
+    
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     return {frameBuffer:fb,texture:texture};
 
 }
@@ -492,60 +518,34 @@ async function loadGLTF(gl, path) {
 
     
     const depthTextureSize = 2048;
-    const shadowTexture = createDepthTexture(gl,depthTextureSize,depthTextureSize);
-    
-    const shadowMapFrameBuffer = createFramebuffer(gl,shadowTexture);
+    const shadowFramebuffer = createDepthTextureFramebuffer(gl,depthTextureSize,depthTextureSize);
 
-    const vertexShaderShadowMap = `#version 300 es
-    #pragma vscode_glsllint_stage : vert
-
-    layout(location = 0) in vec3 attrib_position;
-
-    
-    uniform mat4 shadowMapMatrix;
-
-    void main()
-    {
-        gl_Position = shadowMapMatrix*vec4(attrib_position,1.0);
-    }
-    `;
-    const fragmentShaderShadowMap = `#version 300 es
-    precision highp float;
-    #pragma vscode_glsllint_stage : frag
-    
-    
-    out vec4 out_color;
-    void main()
-    {
-        out_color = vec4(0.0,0.0,0.0,1.0);
-    }
-    `;
-    const shadowMapProgram = compileShaderProgram(gl,vertexShaderShadowMap,fragmentShaderShadowMap);
 
     const lightShadowMapPositionUniform = gl.getUniformLocation(
-        shadowMapProgram,
+        shadowFramebuffer.program,
         "shadowMapPosition"
     );
     const rotationShadowMapMatrixUniform = gl.getUniformLocation(
-        shadowMapProgram,
+        shadowFramebuffer.program,
         "shadowMapRotation"
     );
     const scaleShadowMapUniform = gl.getUniformLocation(
-        shadowMapProgram,
+        shadowFramebuffer.program,
         "shadowMapScale"
     );
     const shadowMapMatrixUniform = gl.getUniformLocation(
-        shadowMapProgram,
+        shadowFramebuffer.program,
         "shadowMapMatrix"
     );
+    console.log(shadowFramebuffer);
     return {
         modelMatrix: getModelMatrix(gltfObj),
         drawShadowMap: function (uniforms) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, shadowMapFrameBuffer.frameBuffer);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFramebuffer.frameBuffer);
 
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            gl.viewport(0, 0, depthTextureSize, depthTextureSize);
-            gl.useProgram(shadowMapProgram);
+            gl.viewport(0, 0, shadowFramebuffer.texture.height, shadowFramebuffer.texture.width);
+            gl.useProgram(shadowFramebuffer.program);
             drawbles.map((drawble) => {
                 gl.uniformMatrix4fv(
                     shadowMapMatrixUniform,
@@ -565,7 +565,7 @@ async function loadGLTF(gl, path) {
             });
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            return shadowMapFrameBuffer.texture;
+            return shadowFramebuffer.texture.texture;
         },
         drawNormal:function(){
             
@@ -607,7 +607,7 @@ async function loadGLTF(gl, path) {
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, drawble.glAlbedoTexture);
                 gl.activeTexture(gl.TEXTURE1);
-                gl.bindTexture(gl.TEXTURE_2D, shadowMap.texture);
+                gl.bindTexture(gl.TEXTURE_2D, shadowFramebuffer.texture.texture);
                 if (drawble.glNormalTexture != undefined) {
                     gl.activeTexture(gl.TEXTURE2);
                     gl.bindTexture(gl.TEXTURE_2D, drawble.glNormalTexture);
