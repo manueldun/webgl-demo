@@ -11,7 +11,7 @@ function getModelMatrix(gltfObj) {
     }
     return modelMatrix;
 }
-function createTexture(gl,width,height,internalFormat,format,type)
+function createTexture(gl,width,height,internalFormat,format,type,data)
 {
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -25,7 +25,7 @@ function createTexture(gl,width,height,internalFormat,format,type)
         0, // border
         format,//gl.DEPTH_COMPONENT, // format
         type, //gl.FLOAT// type
-        null // data
+        data // data
     );
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -59,15 +59,39 @@ function createDepthTextureFramebuffer(gl,width,height)
         out_color = vec4(0.0,0.0,0.0,1.0);
     }
     `;
+    
     const shadowMapProgram = compileShaderProgram(gl,vertexShaderShadowMap,fragmentShaderShadowMap);
-    const texture = createTexture(gl,width,height,gl.DEPTH_COMPONENT32F,gl.DEPTH_COMPONENT,gl.FLOAT);
+    const lightShadowMapPositionUniform = gl.getUniformLocation(
+        shadowMapProgram,
+        "shadowMapPosition"
+    );
+    const rotationShadowMapMatrixUniform = gl.getUniformLocation(
+        shadowMapProgram,
+        "shadowMapRotation"
+    );
+    const scaleShadowMapUniform = gl.getUniformLocation(
+        shadowMapProgram,
+        "shadowMapScale"
+    );
+    const shadowMapMatrixUniform = gl.getUniformLocation(
+        shadowMapProgram,
+        "shadowMapMatrix"
+    );
+    const texture = createTexture(gl,width,height,gl.DEPTH_COMPONENT32F,gl.DEPTH_COMPONENT,gl.FLOAT,null);
+
     return {
         ...createFramebuffer(gl,texture,gl.DEPTH_ATTACHMENT),
-        program:shadowMapProgram}; 
+        program:shadowMapProgram,
+        lightShadowMapPositionUniform:lightShadowMapPositionUniform,
+        rotationShadowMapMatrixUniform:rotationShadowMapMatrixUniform,
+        scaleShadowMapUniform:scaleShadowMapUniform,
+        shadowMapMatrixUniform:shadowMapMatrixUniform
+
+    }; 
 }
 function createFramebuffer(gl,texture,attachmentPoint){
+    
     const fb = gl.createFramebuffer();
-    console.log({texture});
     // bind the framebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
     gl.framebufferTexture2D(
@@ -78,8 +102,8 @@ function createFramebuffer(gl,texture,attachmentPoint){
         0 // mip level
     );
 
-    const completeness = gl.checkFramebufferStatus(fb);
-    if(completeness!=gl.COMPLETE)
+    const completeness = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if(completeness!=gl.FRAMEBUFFER_COMPLETE)
     {
         console.log("frame buffer incomplete");
     }
@@ -120,6 +144,104 @@ function compileShaderProgram(gl,vertexShaderSource,fragmentShaderSource)
     gl.deleteShader(fragmentShader);
     return program;
     
+}
+function createNormalCubemap(gl)
+{
+    const vertexShaderShadowMap = `#version 300 es
+    #pragma vscode_glsllint_stage : vert
+
+    layout(location = 0) in vec3 attrib_position;
+    layout(location = 1) in vec3 attrib_normal;
+    layout(location = 2) in vec2 attrib_texCoord;
+    layout(location = 3) in vec4 attrib_tangent;
+
+    out vec2 var_uv;
+    out vec2 var_normal;
+    out vec2 var_tangent;
+    uniform mat4 matrix;
+
+    void main()
+    {
+        var_uv = attrib_texCoord;
+        var_normal = attrib_normal;
+        var_tangent = attrib_tangent;
+        gl_Position = shadowMapMatrix*vec4(attrib_position,1.0);
+    }
+    `;
+    const fragmentShaderShadowMap = `#version 300 es
+    precision highp float;
+    #pragma vscode_glsllint_stage : frag
+    uniform sampler2D normalMap;
+    
+    in vec2 var_uv;
+    out vec4 out_color;
+    void main()
+    {
+        out_color = vec4(0.0,0.0,0.0,1.0);
+    }
+    `;
+    return function(){
+
+    };
+}
+async function compileForwardShaderProgram(gl)
+{
+
+    const vertexShaderSource = await getStringFile("/shaders/shader.vs");
+
+    const fragmentShaderSource = await getStringFile("/shaders/shader.fs");
+    const program = compileShaderProgram(gl,vertexShaderSource,fragmentShaderSource);
+
+
+    const normalSamplerUniformLocation = gl.getUniformLocation(
+        program,
+        "normal_sampler"
+    );
+    const shadowMapSamplerUniformLocation = gl.getUniformLocation(
+        program,
+        "shadowMap_sampler"
+    );
+    const projectedShadowMapMatrixUniformLocation = gl.getUniformLocation(
+        program,
+        "shadowMapMatrix"
+    );
+    const lightOriginUniformLocation = gl.getUniformLocation(
+        program,
+        "shadowMapPosition"
+    );
+    const rotationMatrixUniform = gl.getUniformLocation(
+        program,
+        "rotationMatrix"
+    );
+    const colorSamplerUniformLocation = gl.getUniformLocation(
+        program,
+        "color_sampler"
+    );
+    const cameraPositionUniformLocation = gl.getUniformLocation(
+        program,
+        "cameraPosition"
+    );
+    const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
+    const metallicRoughnessUniformLocation = gl.getUniformLocation(
+        program,
+        "metallicRoughness"
+    );
+    return {
+        program:program,
+        normalSamplerUniformLocation:normalSamplerUniformLocation,
+        shadowMapSamplerUniformLocation:shadowMapSamplerUniformLocation,
+        mvpUniformLocation:mvpUniformLocation,
+        metallicRoughnessUniformLocation:metallicRoughnessUniformLocation,
+        cameraPositionUniformLocation:cameraPositionUniformLocation,
+        colorSamplerUniformLocation:colorSamplerUniformLocation,
+        rotationMatrixUniform:rotationMatrixUniform,
+        lightOriginUniformLocation:lightOriginUniformLocation,
+        projectedShadowMapMatrixUniformLocation:projectedShadowMapMatrixUniformLocation
+
+    
+    }
+
+
 }
 async function loadGLTF(gl, path) {
     const currentDirectory = path.slice(0, path.lastIndexOf("/") + 1);
@@ -475,69 +597,14 @@ async function loadGLTF(gl, path) {
     );
 
     const drawbles = await Promise.all(drawblesPromises);
-    const vertexShaderSource = await getStringFile("/shaders/shader.vs");
 
-    const fragmentShaderSource = await getStringFile("/shaders/shader.fs");
-
-    const program = compileShaderProgram(gl,vertexShaderSource,fragmentShaderSource);
-
-
-    const normalSamplerUniformLocation = gl.getUniformLocation(
-        program,
-        "normal_sampler"
-    );
-    const shadowMapSamplerUniformLocation = gl.getUniformLocation(
-        program,
-        "shadowMap_sampler"
-    );
-    const projectedShadowMapMatrixUniformLocation = gl.getUniformLocation(
-        program,
-        "shadowMapMatrix"
-    );
-    const lightOriginUniformLocation = gl.getUniformLocation(
-        program,
-        "shadowMapPosition"
-    );
-    const rotationMatrixUniform = gl.getUniformLocation(
-        program,
-        "rotationMatrix"
-    );
-    const colorSamplerUniformLocation = gl.getUniformLocation(
-        program,
-        "color_sampler"
-    );
-    const cameraPositionUniformLocation = gl.getUniformLocation(
-        program,
-        "cameraPosition"
-    );
-    const mvpUniformLocation = gl.getUniformLocation(program, "mvp");
-    const metallicRoughnessUniformLocation = gl.getUniformLocation(
-        program,
-        "metallicRoughness"
-    );
-
-    
+    const forwardProgram = await compileForwardShaderProgram(gl);
+   
     const depthTextureSize = 2048;
     const shadowFramebuffer = createDepthTextureFramebuffer(gl,depthTextureSize,depthTextureSize);
 
+        console.log(shadowFramebuffer);
 
-    const lightShadowMapPositionUniform = gl.getUniformLocation(
-        shadowFramebuffer.program,
-        "shadowMapPosition"
-    );
-    const rotationShadowMapMatrixUniform = gl.getUniformLocation(
-        shadowFramebuffer.program,
-        "shadowMapRotation"
-    );
-    const scaleShadowMapUniform = gl.getUniformLocation(
-        shadowFramebuffer.program,
-        "shadowMapScale"
-    );
-    const shadowMapMatrixUniform = gl.getUniformLocation(
-        shadowFramebuffer.program,
-        "shadowMapMatrix"
-    );
-    console.log(shadowFramebuffer);
     return {
         modelMatrix: getModelMatrix(gltfObj),
         drawShadowMap: function (uniforms) {
@@ -548,7 +615,7 @@ async function loadGLTF(gl, path) {
             gl.useProgram(shadowFramebuffer.program);
             drawbles.map((drawble) => {
                 gl.uniformMatrix4fv(
-                    shadowMapMatrixUniform,
+                    shadowFramebuffer.shadowMapMatrixUniform,
                     false,
                     uniforms.inverse
                 );
@@ -574,35 +641,35 @@ async function loadGLTF(gl, path) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-            gl.useProgram(program);
+            gl.useProgram(forwardProgram.program);
             drawbles.map((drawble) => {
-                gl.uniform1i(normalSamplerUniformLocation, 2);
-                gl.uniform1i(shadowMapSamplerUniformLocation, 1);
+                gl.uniform1i(forwardProgram.normalSamplerUniformLocation, 2);
+                gl.uniform1i(forwardProgram.shadowMapSamplerUniformLocation, 1);
                 gl.uniformMatrix4fv(
-                    projectedShadowMapMatrixUniformLocation,
+                    forwardProgram.projectedShadowMapMatrixUniformLocation,
                     false,
                     shadowMapUniforms.inverse
                 );
                 gl.uniform3fv(
-                    lightOriginUniformLocation,
+                    forwardProgram.lightOriginUniformLocation,
                     shadowMapUniforms.position
                 );
                 gl.uniformMatrix3fv(
-                    rotationMatrixUniform,
+                    forwardProgram.rotationMatrixUniform,
                     false,
                     shadowMapUniforms.rotationMatrix
                 );
-                gl.uniform1i(colorSamplerUniformLocation, 0);
+                gl.uniform1i(forwardProgram.colorSamplerUniformLocation, 0);
                 gl.uniform3fv(
-                    cameraPositionUniformLocation,
+                    forwardProgram.cameraPositionUniformLocation,
                     uniformMatrices.cameraPosition
                 );
                 gl.uniformMatrix4fv(
-                    mvpUniformLocation,
+                    forwardProgram.mvpUniformLocation,
                     false,
                     uniformMatrices.mvpMatrix
                 );
-                gl.uniform1i(metallicRoughnessUniformLocation, 3);
+                gl.uniform1i(forwardProgram.metallicRoughnessUniformLocation, 3);
 
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, drawble.glAlbedoTexture);
