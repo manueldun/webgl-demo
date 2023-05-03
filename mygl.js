@@ -145,7 +145,7 @@ function compileShaderProgram(gl,vertexShaderSource,fragmentShaderSource)
     return program;
     
 }
-function createNormalCubemap(gl)
+function createCubemap(gl)
 {
     const vertexShaderShadowMap = `#version 300 es
     #pragma vscode_glsllint_stage : vert
