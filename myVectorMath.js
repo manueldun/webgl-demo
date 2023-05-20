@@ -6,11 +6,11 @@ function initViewProjectionMatrix(canvasElement) {
     );
 
     this.position = glMatrix.vec3.fromValues(
-        964.2222900390625,
-        -576.921875,
-        228.73336791992188
+        7.51,
+        -5.57,
+        1.57
     );
-
+    
     return (inputData, modelMatrix) => {
         let leftDirection = glMatrix.vec3.create();
         glMatrix.vec3.cross(leftDirection, [0, 1, 0], this.forwardDirection);
@@ -109,7 +109,10 @@ function initViewProjectionMatrix(canvasElement) {
         var viewMatrix = glMatrix.mat4.create();
         glMatrix.mat4.mul(viewMatrix, rotationMatrix, translateMatrix);
 
-        glMatrix.mat4.mul(viewMatrix, viewMatrix, modelMatrix);
+        if(modelMatrix!=undefined)
+        {
+            //glMatrix.mat4.mul(viewMatrix, viewMatrix, modelMatrix);
+        }
 
         let projectionMatrix = glMatrix.mat4.create();
         let screenRatio =
@@ -188,6 +191,8 @@ function getShadowMapUniforms(shadowMapData) {
     );
 
     const scaleVec = glMatrix.vec3.fromValues(scale, scale, scale);
+
+    const sampleSpan = shadowMapData.SampleSpan;
     glMatrix.mat4.fromRotationTranslationScale(
         matrix,
         sphericalQuaternion,
@@ -203,5 +208,6 @@ function getShadowMapUniforms(shadowMapData) {
         rotationMatrix: rotationMatrix,
         matrix: matrix,
         inverse: inverse,
+        sampleSpan
     };
 }

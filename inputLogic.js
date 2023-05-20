@@ -110,7 +110,7 @@ function initInputLogic(canvas) {
             delta = Date.now() - lastTime;
             lastTime = Date.now();
         }
-        const speedFactor = 1;
+        const speedFactor = 0.008;
         if (keyW === true) {
             deltaPosition.forward = delta * speedFactor;
         } else if (keyS === true) {
@@ -136,8 +136,9 @@ function initGUIData() {
         "position z": 0.0,
         "vertical angle": 73.46,
         "horizontal angle": 54.25,
-        scale: 1900.0,
+        scale: 25.0,
         "Animate light": false,
+        "SampleSpan": 0.01,
     };
 
     const gui = new dat.GUI();
@@ -148,6 +149,10 @@ function initGUIData() {
         .listen();
     gui.add(shadowMapsGUI, "horizontal angle").min(0.0).max(180.0).step(0.0001);
     gui.add(shadowMapsGUI, "Animate light");
+    gui.add(shadowMapsGUI, "SampleSpan")
+        .min(0.0001)
+        .max(1.0)
+        .step(0.0001);
     return function () {
         if (shadowMapsGUI["Animate light"]) {
             shadowMapsGUI["vertical angle"] =
