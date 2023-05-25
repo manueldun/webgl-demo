@@ -3,23 +3,33 @@
 precision highp float;
 precision highp usampler2D;
 
-uniform sampler2D normal_sampler;
+//pbr material related
+uniform vec4 baseColorFactor;
+uniform sampler2D baseColorTexture;
+uniform sampler2D metallicRoughnessTexture;
+uniform float metalnessFactor;
+uniform float RoughnessFactor;
+
+uniform sampler2D normalTextureTexture;
+
+//camera
+uniform vec3 cameraPosition;
+
+//model
+uniform mat4 modelMatrix;
+
+//shadowmap related
 uniform sampler2D shadowMap_sampler;
 uniform mat4 shadowMapMatrix;
 uniform vec3 shadowMapPosition;
 uniform mat3 rotationMatrix;
-uniform vec3 cameraPosition;
-uniform sampler2D color_sampler;
-uniform sampler2D metallicRoughness;
-uniform vec4 colorFactor;
-uniform float metalnessFactor;
-uniform float RoughnessFactor;
-uniform mat4 modelMatrix;
 
+//RSM related
 uniform sampler2D albedoRSM;
 uniform sampler2D normalRSM;
 uniform sampler2D positionRSM;
 
+//misc
 uniform float sampleSpan;
 
 in vec3 var_position;
@@ -95,7 +105,7 @@ void main()
    vec3 bitangent = normalize(cross(meshTangent,meshNormal));
    mat3 TBN = mat3(meshTangent,bitangent,meshNormal);
 
-   vec3 normalTexture = (texture(normal_sampler,var_texCoord).rgb);
+   vec3 normalTexture = (texture(normalTextureTexture,var_texCoord).rgb);
    normalTexture=(normalTexture.rgb-vec3(0.5f))*2.0f;
    vec3 normalP = normalize(TBN*normalTexture);
 
@@ -131,17 +141,17 @@ void main()
 
       indirectFlux += randomSamplePoint.x*randomSamplePoint.x*albedoIndirect*0.01*numerator/denominator;
    }
-   float metallic = texture(metallicRoughness,var_texCoord).b;
-   float roughness = texture(metallicRoughness,var_texCoord).g;
+   float metallic = texture(metallicRoughnessTexture,var_texCoord).b;
+   float roughness = texture(metallicRoughnessTexture,var_texCoord).g;
 
 
    vec3 light=rotationMatrix*vec3(0.0,0.0,-1.0);
-   vec4 colorTextureWithAlpha = texture(color_sampler, var_texCoord);
+   vec4 colorTextureWithAlpha = texture(baseColorTexture, var_texCoord);
    if(colorTextureWithAlpha.a<0.9)
    {
       discard;
    }
-   vec3 albedo = pow(colorTextureWithAlpha.rgb,vec3(2.2))*colorFactor.rgb;
+   vec3 albedo = pow(colorTextureWithAlpha.rgb,vec3(2.2))*baseColorFactor.rgb;
 
 
    vec3 radiance = vec3(5.0);
@@ -214,10 +224,12 @@ void main()
          out_color = vec4(albedo*0.0f,1.0f);
     }
     
+   vec4 albedo1 = texture(baseColorTexture, var_texCoord);
 
-      float gamma = 2.2f;
-      out_color.rgb = pow(out_color.rgb, vec3(1.0f/gamma));
+   float gamma = 2.2f;
+   out_color.rgb = pow(out_color.rgb, vec3(1.0f/gamma));
+   out_color = vec4(albedo1.rgb,1.0);
+   //out_color = vec4(0.0,0.0,0.0,1.0);
 
  
-      //out_color.rgb = vec3(indirectFlux).rgb;
 }

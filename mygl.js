@@ -653,6 +653,7 @@ async function loadGLTF(gl, paths,materialOverride) {
     (paths.map(async (path)=>{
         const currentDirectory = path.slice(0, path.lastIndexOf("/") + 1);
         const gltfObj = JSON.parse(await getStringFile(path));
+        console.log(gltfObj);
         let rawBufferFiles = await loadBuffers(gltfObj.buffers,currentDirectory);
 
         let glTextures = await loadImages(gl,gltfObj.images,currentDirectory);

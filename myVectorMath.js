@@ -1,5 +1,5 @@
 function initViewProjectionMatrix(canvasElement) {
-    this.forwardDirection = glMatrix.vec4.fromValues(
+    this.forwardDirection = glMatrix.vec3.fromValues(
         -0.9267086982727051,
         0.1860613077878952,
         -0.3264854848384857
