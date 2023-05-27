@@ -1,72 +1,315 @@
-
-class Framebuffer
+class ShaderUniform
 {
-    #framebuffer;
-    constructor(gl,textures)
+    constructor(name,type,data)
     {
-        this.#framebuffer = gl.createFramebuffer();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.#framebuffer);
-        for(const texture in textures)
-        {
-            gl.framebufferTexture2D(
-                gl.FRAMEBUFFER, // target
-                textures[texture].fbAttachmentPoint,//gl.DEPTH_ATTACHMENT, // attachment point
-                gl.TEXTURE_2D, // texture target
-                textures[texture].texture, // texture
-                0 // mip level
-            );
-        }
-    
-        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
-        switch(gl.checkFramebufferStatus(gl.FRAMEBUFFER))
-        {
-            case gl.FRAMEBUFFER_COMPLETE:
-                break;
-            case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-            console.log("frame buffer incomplete attachment");
-                break;
-            case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-            console.log("frame buffer incomplete missing attachment");
-                break;
-            case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
-                console.log("frame buffer incomplete dimansions");
-                break;
-            case gl.FRAMEBUFFER_UNSUPPORTED:
-            console.log("frame buffer incomplete unsupported");
-                break;
-            case gl.FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-            console.log("frame buffer incomplete multisample");
-                break;
-        }
-        
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        //return {frameBuffer:fb,textures:textures};
-
+        this.uniformName = name;
+        this.uniformType = type;
+        this.uniformData = data;
     }
 }
-class DataTexture{
-    #_texture;
-    constructor(gl,data,width=1,height=1,numOfChannels=3)
+class RenderPass{
+    constructor(gl,framebuffer,shader)
     {
+        this.gl = gl;
+        this.framebuffer = framebuffer;
+        this.shader = shader;
+    }
+    bind()
+    {
+        this.framebuffer.bind();
+        this.shader.useProgram();
+    }
 
-        this.#_texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, this.#_texture);
+
+}
+class DefaultRenderPass extends RenderPass
+{
+    constructor(gl,shader,width,height)
+    {
+        const framebuffer = new DefaultFrameBuffer(gl);
+        super(gl,framebuffer,shader);
+        this._shadowMap;
+        this._shadowMapMatrix = glMatrix.mat4.create();
+        this.width = width;
+        this.height = height;
+        this._viewMatrix = glMatrix.mat4.create();
+        this._projectionMatrix = glMatrix.mat4.create();
+        this._cameraPosition = glMatrix.vec3.create();
+    }
+    bind()
+    {
+        super.bind();
         
-        switch(numOfChannels)
+        this.gl.viewport(0.0,0.0,this.width,this.height);
+        
+    }
+    set shadowMap(shadowMap)
+    {
+        this._shadowMap = shadowMap.texture;
+    }
+    setUniforms()
+    {
+        this.shader.setUniform("viewMatrix","mat4",this._viewMatrix);
+        this.shader.setUniform("projectionMatrix","mat4",this._projectionMatrix);
+        this.shader.setUniform("shadowMapMatrix","mat4",this._shadowMapMatrix);
+        this.shader.setUniform("cameraPosition","vec3",this._cameraPosition);
+        this.shader.setTexture("shadowMapTexture",this._shadowMap,3);
+    }
+    set projectionMatrix(matrix)
+    {
+        this._projectionMatrix = matrix;
+    }
+    set shadowMapMatrix(matrix)
+    {
+        this._shadowMapMatrix = matrix;
+    }
+    set viewMatrix(matrix)
+    {
+        this._viewMatrix = matrix;
+    }
+    set cameraPosition(position)
+    {
+        this._cameraPosition = position;
+    }
+
+}
+class ShadowmapRenderPass extends RenderPass
+{
+    constructor(gl,width,height){
+        const vertexShaderShadowMap = `#version 300 es
+        #pragma vscode_glsllint_stage : vert
+        
+        layout(location = 0) in vec3 attrib_position;
+        
+        
+        uniform mat4 shadowMapMatrix;
+        uniform mat4 modelMatrix;
+        
+        void main()
         {
+            gl_Position = shadowMapMatrix*modelMatrix*vec4(attrib_position,1.0);
+        }
+        `;
+        const fragmentShaderShadowMap = `#version 300 es
+        precision highp float;
+        #pragma vscode_glsllint_stage : frag
+        
+        
+        out vec4 out_color;
+        void main()
+        {
+            out_color = vec4(0.0,0.0,0.0,1.0);
+        }
+        `;
+        const shader = new ShaderProgram(gl,vertexShaderShadowMap,fragmentShaderShadowMap);    
+        const depthTexture = new DepthTexture(gl,width,height);
+        const framebuffer = new ShadowMapFrameBuffer(gl,depthTexture);
+        super(gl,framebuffer,shader);
+        this.width = width;
+        this.height = height;
+        this._shadowMap = depthTexture;
+        this.shadowMapMatrix = glMatrix.mat4.create();
+        this._modelMatrix = glMatrix.mat4.create();
+    }
+
+    get shadowMap()
+    {
+        return this._shadowMap;
+    }
+    bind()
+    {
+        super.bind();
+        this.gl.viewport(0.0,0.0,this.width,this.height);
+    }
+    setUniforms()
+    {
+        this.shader.setUniform("shadowMapMatrix","mat4",this._shadowMapMatrix);
+    }
+    set shadowMapMatrix(matrix)
+    {
+        this._shadowMapMatrix = matrix;
+    }
+    get shadowMapMatrix()
+    {
+        return this._shadowMapMatrix;
+    }
+
+}
+class Framebuffer
+{
+    #gl;
+    #framebuffer;
+    constructor(gl,depthTexture= null,colorTextures = [])
+    {
+        this.#gl =gl;
+        if(!(depthTexture===null && colorTextures.length===0))
+        {
+            this.#framebuffer = gl.createFramebuffer();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.#framebuffer);
+            const colorAttachments = [];
+            for(let i=0;i<colorTextures.length;i++)
+            {
+                gl.framebufferTexture2D(
+                    gl.FRAMEBUFFER, // target
+                    gl.COLOR_ATTACHMENT0+i,//attachment point
+                    gl.TEXTURE_2D, // texture target
+                    textures[i].glTexture, // texture
+                    0 // mip level
+                );
+                colorAttachments.push(gl.COLOR_ATTACHMENT0+i);
+            }
+            if(depthTexture!==null)
+            {
+                gl.framebufferTexture2D(
+                    gl.FRAMEBUFFER, // target
+                    gl.DEPTH_ATTACHMENT,//attachment point
+                    gl.TEXTURE_2D, // texture target
+                    depthTexture.texture, // texture
+                    0 // mip level
+                );
+            }
+            switch(gl.checkFramebufferStatus(gl.FRAMEBUFFER))
+            {
+                case gl.FRAMEBUFFER_COMPLETE:
+                    break;
+                case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+                console.log("frame buffer incomplete attachment");
+                    break;
+                case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+                console.log("frame buffer incomplete missing attachment");
+                    break;
+                case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+                    console.log("frame buffer incomplete dimansions");
+                    break;
+                case gl.FRAMEBUFFER_UNSUPPORTED:
+                console.log("frame buffer incomplete unsupported");
+                    break;
+                case gl.FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+                console.log("frame buffer incomplete multisample");
+                    break;
+            }
+            
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        }
+        else
+        {
+            this.#framebuffer = null;
+        }
+    }
+    bind()
+    {
+        const gl = this.gl;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.#framebuffer);
+    }
+    get gl()
+    {
+        return this.#gl;
+    }
+}
+class DefaultFrameBuffer extends Framebuffer
+{
+    constructor(gl)
+    {
+        super(gl);
+    }
+}
+class ShadowMapFrameBuffer extends Framebuffer
+{
+    constructor(gl,depthTexture){
+        super(gl,depthTexture);
+    }
+};
+
+class Texture
+{
+    constructor(gl,width,height)
+    {
+        this.gl = gl;
+        this.texture = gl.createTexture();
+        this.size = {width,height};
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        
+    }
+    bind(gl)
+    {
+        gl.bindTexture(gl.TEXTURE_2D,this.texture);
+    }
+
+
+}
+class FloatTexture extends Texture
+{
+    constructor(gl,width,height,numOfComponents=4)
+    {
+        super(gl,width,height);
+        switch(numOfComponents)
+        {
+            case 4:
+                gl.texImage2D(
+                    gl.TEXTURE_2D,
+                    0,
+                    gl.RGBA32F,
+                    width,
+                    height,
+                    0,
+                    gl.RGBA,
+                    gl.FLOAT,
+                    null
+                );
+                break;
             case 3:
                 gl.texImage2D(
                     gl.TEXTURE_2D,
                     0,
-                    gl.RGB,
+                    gl.RGB32F,
                     width,
                     height,
                     0,
                     gl.RGB,
-                    gl.UNSIGNED_BYTE,
-                    data,
-                    0
+                    gl.FLOAT,
+                    null
                 );
+                break;
+                default:
+                    throw new Error("Error: number of componets not supported");
+        }
+    }
+
+};
+class DepthTexture extends Texture
+{
+    constructor(gl,width,height)
+    {
+        super(gl,width,height);
+
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.DEPTH_COMPONENT32F,
+            width,
+            height,
+            0,
+            gl.DEPTH_COMPONENT,
+            gl.FLOAT,
+            null
+        );
+        
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+
+}
+class UintDataTexture extends Texture
+{
+    constructor(gl,data,width=1,height=1,numOfChannels=3)
+    {
+        super(gl,width,height);
+        
+        switch(numOfChannels)
+        {
+            case 3:
                 break;
             case 4:
                 gl.texImage2D(
@@ -77,9 +320,8 @@ class DataTexture{
                     height,
                     0,
                     gl.RGBA,
-                    gl.UNSIGNED_BYTE,
-                    data,
-                    0
+                    type,
+                    data
                 );
                 break;
             default:
@@ -87,43 +329,37 @@ class DataTexture{
         }
     }
     
-    get texture()
-    {
-        return this.#_texture;
-    }
+
 }
-class Texture
+class TextureFile extends Texture
 {
-    #gl;
-    #_texture;
+
     constructor(gl,path,onLoad)
     {
-
-        this.#gl = gl;
-        this.#_texture = null;
+        super(gl,null,null);
+        this.gl = gl;
+        this.texture = null;
         this.#loadImage(path).then((imageBlob)=>{
-            this.#_texture = this.#loadTexture(imageBlob,path);
+            this.texture = this.#loadTexture(imageBlob,path);
             onLoad();
         });
     }
-    static AsyncTexture(gl,path)
+    static AsyncTextureFile(gl,path)
     {
         return new Promise((resolve)=>{
-            const texture = new Texture(gl,path,()=>{
+            const texture = new TextureFile(gl,path,()=>{
                 resolve(texture);
             })
         });
     }
-    get texture()
-    {
-        return this.#_texture;
-    }
+
     #loadTexture(imageBlob,path)//TODO sampler info
     {
-        const gl = this.#gl;
-        const glTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, glTexture);
-            
+        const gl = this.gl;
+        this.texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        this.width = imageBlob.width;
+        this.height = imageBlob.height;
         
         if (/^.*\.png/.test(path)) {
             gl.texImage2D(
@@ -145,13 +381,9 @@ class Texture
             );
         }
     
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 
         gl.generateMipmap(gl.TEXTURE_2D);
-        return glTexture;
+        return this.texture;
     }
     #loadImage(fileName, onProgress) {
         return new Promise((resolve, reject) => {
@@ -194,7 +426,6 @@ class Texture
     }
     
 }
-
 class ShaderProgram{
     #gl;
     #shaderProgram;
@@ -204,6 +435,10 @@ class ShaderProgram{
         this.#gl = gl;
         this.#shaderProgram = this.#compileShaderProgram(gl,vertexShaderSource,fragmentShaderSource);
         this.#uniformMapLocationMap = new Map();
+    }
+    existUniform(uniformName)//for textures
+    {
+        return this.#uniformMapLocationMap.has(uniformName);
     }
     setUniform(uniformName,uniformType,uniformData)
     {
@@ -216,7 +451,10 @@ class ShaderProgram{
                 );
             this.#uniformMapLocationMap.set(uniformName,uniformLocation);
         }
-        
+        if(this.#uniformMapLocationMap.get(uniformName)===null)
+        {
+            return null;
+        }
         switch(uniformType)
         {
             case "float":
@@ -228,11 +466,15 @@ class ShaderProgram{
             case "vec4":        
                 gl.uniform4fv(this.#uniformMapLocationMap.get(uniformName),uniformData);
             break;
-            case "texture":
-                gl.uniform1i(this.#uniformMapLocationMap.get(uniformName),uniformData);
-                break;
             case "mat4":
                 gl.uniformMatrix4fv(
+                    this.#uniformMapLocationMap.get(uniformName),
+                    false,
+                    uniformData
+                );
+                break;
+            case "mat3":
+                gl.uniformMatrix3fv(
                     this.#uniformMapLocationMap.get(uniformName),
                     false,
                     uniformData
@@ -241,6 +483,27 @@ class ShaderProgram{
                 default:
                     throw new Error("Error: uniform type not supported");
         }
+    }
+    setTexture(uniformName,glTexture,textureSlot)
+    {
+        const gl = this.#gl;//for ease of typing
+        if(!this.#uniformMapLocationMap.has(uniformName))
+        {
+            const uniformLocation = gl.getUniformLocation(
+                this.#shaderProgram,
+                uniformName
+                );
+            this.#uniformMapLocationMap.set(uniformName,uniformLocation);
+        }
+        
+        if(this.#uniformMapLocationMap.get(uniformName)===null)
+        {
+            return null;
+        }
+
+        gl.activeTexture(gl.TEXTURE0+textureSlot);
+        gl.bindTexture(gl.TEXTURE_2D,glTexture);
+        gl.uniform1i(this.#uniformMapLocationMap.get(uniformName),textureSlot);
     }
     useProgram()
     {
@@ -345,40 +608,17 @@ class Material{
     }
     setUniforms(
         shader,
-        modelMatrix,
-        viewMatrix,
-        projectionMatrix,
-        modelViewProjectionMatrix,
-        cameraPosition,
-        shadowMapTexture,
-        rsmColorTexture,
-        rsmNormalTexture,
-        rsmPositionTexture
+        modelMatrix
         )
     {
         const gl = this.#gl;
         shader.setUniform("modelMatrix","mat4",modelMatrix);
-        shader.setUniform("viewMatrix","mat4",viewMatrix);
-        shader.setUniform("projectionMatrix","mat4",projectionMatrix);
-        shader.setUniform("viewProjectionMatrix","mat4",modelViewProjectionMatrix);
-        shader.setUniform("cameraPosition","vec3",cameraPosition);
         shader.setUniform("baseColorFactor","vec4",this.#_baseColorFactor);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D,this.#_baseColorTexture.texture);
-        shader.setUniform("baseColorTexture","texture",0);
-
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D,this.#_metallicRoughnessTexture.texture);
-        shader.setUniform("metallicRoughnessTexture","texture",1);
         
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D,this.#_normalTexture.texture);
-        shader.setUniform("normalTextureTexture","texture",2);
-    
-        //shader.setUniform("shadowMapTexture","texture",3);
-        //shader.setUniform("rsmColorTexture","texture",4);
-        //shader.setUniform("rsmNormalTexture","texture",5);
-        //shader.setUniform("rsmPositionTexture","texture",6);
+        shader.setTexture("baseColorTexture",this.#_baseColorTexture.texture,0);
+        shader.setTexture("metallicRoughnessTexture",this.#_metallicRoughnessTexture.texture,1);
+        shader.setTexture("normalTextureTexture",this.#_normalTexture.texture,2);
+
 
     }
     
@@ -431,7 +671,7 @@ class Drawble{
         }).then((buffers)=>{//TODO buffer and textures can be load in parallel
             this.#rawBuffers = loadBufferSlices(this.#gltfObj.bufferViews,buffers);
             return Promise.all(this.#gltfObj.images.map((image)=>{
-                return Texture.AsyncTexture(gl,currentDirectory+image.uri)
+                return TextureFile.AsyncTextureFile(gl,currentDirectory+image.uri)
             }));
         }).then((textures)=>{
             this.#textures = textures;
@@ -622,7 +862,7 @@ class Drawble{
         let metallicRoughnessTexture;
         if(metallicRoughnessGLTF === undefined)
         {
-            metallicRoughnessTexture = new DataTexture(this.#gl,new Uint8Array([0,0,0]));
+            metallicRoughnessTexture = new UintDataTexture(this.#gl,new Uint8Array([0,0,0]));
         }
         else
         {
@@ -640,7 +880,7 @@ class Drawble{
         let normalTexture;
         if(normalTextureGLTF === undefined)
         {
-            normalTexture = new DataTexture(this.#gl,new Uint8Array([128,128,255]));
+            normalTexture = new UintDataTexture(this.#gl,new Uint8Array([128,128,255]));
         }
         else
         {
@@ -653,8 +893,6 @@ class Drawble{
 };
 class Renderer
 {
-    #screenRatio
-    #projectionMatrix
     #_gl;
     constructor(canvasElement)
     {
@@ -667,29 +905,10 @@ class Renderer
             throw new Error("The device in not capable.");
         }
         
-        this.#screenRatio = canvasElement.clientWidth / canvasElement.clientHeight;
         const gl = this.#_gl;//for ease of typing
         gl.clearColor(1.0,1.0,1.0,1.0);
-        gl.viewport(
-            0,
-            0,
-            canvasElement.offsetWidth,
-            canvasElement.offsetHeight
-            );
-            
-        canvasElement.width = canvasElement.offsetWidth;
-        canvasElement.height = canvasElement.offsetHeight;
-            
+
         gl.enable(gl.DEPTH_TEST);
-        this.#projectionMatrix = glMatrix.mat4.create();
-        glMatrix.mat4.perspective(
-            this.#projectionMatrix,
-            10 * (180 / Math.PI),
-            this.#screenRatio,
-            0.1,
-            10000
-            );
-        this.#_viewMatrix = glMatrix.mat4.create();
     }
     get gl()
     {
@@ -700,23 +919,18 @@ class Renderer
     {
         this.#_viewMatrix = viewMatrix;
     }
-    #drawNode(node,modelMatrix,shader)
+    #drawNode(node,modelMatrix,renderPass)
     {
         const gl = this.#_gl;//for ease of typing
-        const viewProjectionMatrix = glMatrix.mat4.create();//TODO put in constructor
-        const cameraPosition = glMatrix.vec3.fromValues(0.0,0.0,0.0);//TODO put in constructor
         if(node.primitives!== undefined)
         {
 
             node.primitives.map((primitive)=>{
                 primitive.material.setUniforms(
-                    shader,
-                    modelMatrix,
-                    this.#_viewMatrix,
-                    this.#projectionMatrix,
-                    viewProjectionMatrix,
-                    cameraPosition
-                    );     
+                    renderPass.shader,
+                    modelMatrix
+                    ); 
+                renderPass.setUniforms();   
                 gl.bindVertexArray(primitive.primitive);         
                 gl.drawElements(
                     gl.TRIANGLES,
@@ -757,21 +971,20 @@ class Renderer
         }
         return modelMatrix;
     }
-    draw(drawble,shader)
+    draw(drawble,renderPass)
     {
         const gl = this.#_gl;//for ease of typing
-        gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
         const stackData = [];
+        renderPass.bind();
+        gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+        //shader.useProgram();
         let currentNode = drawble.nodeRoot;
-        shader.useProgram();
-        let translateVec = glMatrix.vec3.fromValues(0.5,0.5,0.5);
         let modelMatrix = this.#computeModelMatrix(currentNode);
-        glMatrix.mat4.scale(modelMatrix,modelMatrix,translateVec);
         let currentData = {node:currentNode,currentModelMatrix:modelMatrix};
         stackData.push(currentData);
         do//TODO precompute model matrices to enable sorting (research)
         {
-            this.#drawNode(currentData.node,modelMatrix,shader);
+            this.#drawNode(currentData.node,modelMatrix,renderPass);
             
             if(currentData.node.children!==undefined)
             {
@@ -786,5 +999,6 @@ class Renderer
             }
             currentData = stackData.pop();
         }while(stackData.length > 0);
+
     }    
 };

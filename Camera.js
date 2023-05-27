@@ -58,7 +58,7 @@ class Camera{
         canvasElement.addEventListener("touchstart", (e) => {
             e.preventDefault();
             const touches = e.changedTouches;
-            clickedMouseButton = true;
+            this.#clickedMouseButton = true;
             this.#mouseDownX = touches[0].pageX;
             this.#mouseDownY = touches[0].pageY;
         });
@@ -67,7 +67,7 @@ class Camera{
             if (typeof e === "object") {
                 switch (e.button) {
                     case 0:
-                        clickedMouseButton = true;
+                        this.#clickedMouseButton = true;
                         this.#mouseDownX = e.clientX;
                         this.#mouseDownY = e.clientY;
                         break;
@@ -77,13 +77,13 @@ class Camera{
         
         canvasElement.addEventListener("touchend", (e) => {
             e.preventDefault();
-            clickedMouseButton = false;
+            this.#clickedMouseButton = false;
         });
         canvasElement.addEventListener("mouseup",  (e) =>{
             if (typeof e === "object") {
                 switch (e.button) {
                     case 0:
-                        clickedMouseButton = false;
+                        this.#clickedMouseButton = false;
                         break;
                 }
             }
@@ -93,7 +93,7 @@ class Camera{
             e.preventDefault();
 
             const touches = e.changedTouches;
-            if (clickedMouseButton === true) {
+            if (this.#clickedMouseButton === true) {
                 this.#deltaMouse.x = (touches[0].pageX - this.#mouseDownX) * 0.1;
                 this.#mouseDownX = touches[0].pageX;
                 this.#deltaMouse.y = (mouseDownY - touches[0].pageY) * 0.1;
@@ -101,7 +101,7 @@ class Camera{
             }
         });
         canvasElement.addEventListener("mousemove", (e)=>{
-            if (clickedMouseButton === true) {
+            if (this.#clickedMouseButton === true) {
                 this.#deltaMouse.x = (e.clientX - this.#mouseDownX) * 0.1;
                 this.#mouseDownX = e.clientX;
                 this.#deltaMouse.y = (this.#mouseDownY - e.clientY) * 0.1;
@@ -117,7 +117,6 @@ class Camera{
         this.#position = glMatrix.vec3.create();
     }
     #deltaPosition;
-    //#inputData;
     #lastTime;
     #delta;
 
@@ -263,9 +262,6 @@ class Camera{
         let vpMatrix = glMatrix.mat4.create();
         glMatrix.mat4.mul(vpMatrix, projectionMatrix, viewMatrix);
 
-        if (this.#position[0] === NaN) {
-            console.log(delta);
-        }
         return {
             viewMatrix,
             vpMatrix,

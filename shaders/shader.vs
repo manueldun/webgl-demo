@@ -13,7 +13,6 @@ uniform mat4 projectionMatrix;
 
 //shadowmMap related
 uniform mat4 shadowMapMatrix;
-uniform mat3 rotationMatrix;
 
 out vec3 var_position;
 out vec2 var_texCoord;

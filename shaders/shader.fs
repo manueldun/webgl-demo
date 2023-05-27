@@ -19,9 +19,10 @@ uniform vec3 cameraPosition;
 uniform mat4 modelMatrix;
 
 //shadowmap related
-uniform sampler2D shadowMap_sampler;
+uniform sampler2D shadowMapTexture;
 uniform mat4 shadowMapMatrix;
 uniform vec3 shadowMapPosition;
+
 uniform mat3 rotationMatrix;
 
 //RSM related
@@ -40,7 +41,7 @@ in vec3 var_tangent;
 in vec3 var_position_wolrd;
 
 out vec4 out_color;
-const int sampleSizeConstant = 2;
+const int sampleSizeConstant = 3;
 const int sampleStartSample = -sampleSizeConstant;
 const int sampleEndSample = sampleSizeConstant;
 
@@ -116,7 +117,7 @@ void main()
    vec3 albedoIndirectDebug= texture(albedoRSM,normalizedShadowMapCoordinates).rgb;
    vec3 normalIndirectDebug = texture(normalRSM,normalizedShadowMapCoordinates).rgb; 
    vec3 positionIndirectDebug = texture(positionRSM,normalizedShadowMapCoordinates).rgb;
-   for(uint i=0u;i<100u;i++)
+   for(uint i=0u;i<0u;i++)
    {
 
    
@@ -145,7 +146,7 @@ void main()
    float roughness = texture(metallicRoughnessTexture,var_texCoord).g;
 
 
-   vec3 light=rotationMatrix*vec3(0.0,0.0,-1.0);
+   vec3 light=normalize(inverse(mat3(shadowMapMatrix))*vec3(0.0,0.0,-1.0));
    vec4 colorTextureWithAlpha = texture(baseColorTexture, var_texCoord);
    if(colorTextureWithAlpha.a<0.9)
    {
@@ -195,10 +196,10 @@ void main()
       float distanceFromLight = lightOriginToPosition.z/2.0;
 
 
-      ivec2 textureSize= textureSize(shadowMap_sampler,0);
+      ivec2 textureSize= textureSize(shadowMapTexture,0);
       vec2 sizeOfTexel = 1.0f/vec2(textureSize); 
       vec2 normalizedShadowMapCoordinates = (shadowMapCoordinates+vec2(1.0f,1.0f))/2.0f;
-      float shadowMapDepth = float(texture(shadowMap_sampler,normalizedShadowMapCoordinates).r);
+      //float shadowMapDepth = float(texture(shadowMapTexture,normalizedShadowMapCoordinates).r);
         
       float shadowWeight = 0.0f;
       for(int i=sampleStartSample;i<=sampleEndSample;i++)
@@ -206,7 +207,7 @@ void main()
          for(int j=sampleStartSample;j<=sampleEndSample;j++)
          {
             vec2 coordDisplacement = normalizedShadowMapCoordinates+vec2(i,j)*sizeOfTexel;
-            float shadowMapDepth = float(texture(shadowMap_sampler,coordDisplacement).r);
+            float shadowMapDepth = float(texture(shadowMapTexture,coordDisplacement).r);
             
             if(distanceFromLight<shadowMapDepth+0.01)
             {
@@ -221,14 +222,12 @@ void main()
      }
      else{
 
-         out_color = vec4(albedo*0.0f,1.0f);
+         out_color = vec4(0.0f,0.0f,0.0f,1.0f);
     }
     
-   vec4 albedo1 = texture(baseColorTexture, var_texCoord);
-
    float gamma = 2.2f;
    out_color.rgb = pow(out_color.rgb, vec3(1.0f/gamma));
-   out_color = vec4(albedo1.rgb,1.0);
+   //out_color = vec4(depth,0.0f,0.0f,1.0f);
    //out_color = vec4(0.0,0.0,0.0,1.0);
 
  
