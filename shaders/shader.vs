@@ -22,12 +22,12 @@ out vec3 var_tangent;
 out vec3 var_position_wolrd;
 void main()
 {
-    vec4 shadowMapProjection=shadowMapMatrix*modelMatrix*vec4(attrib_position,1.0);
-    var_shadowMapCoord=shadowMapProjection.xyz/shadowMapProjection.w;
+    vec4 shadowMapProjection = shadowMapMatrix * modelMatrix * vec4(attrib_position,1.0);
+    var_shadowMapCoord = shadowMapProjection.xyz / shadowMapProjection.w;
     var_normal = attrib_normal;
     var_texCoord = attrib_texCoord;
     var_tangent = attrib_tangent.xyz;
     var_position_wolrd = attrib_position;
-    var_position = (modelMatrix*vec4(attrib_position,1.0)).xyz;
-    gl_Position = projectionMatrix*viewMatrix*modelMatrix*vec4(attrib_position,1.0);
+    var_position = (modelMatrix * vec4(attrib_position,1.0)).xyz;
+    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(attrib_position,1.0);
 }

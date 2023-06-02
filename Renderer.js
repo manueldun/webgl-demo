@@ -35,6 +35,7 @@ class DefaultRenderPass extends RenderPass
         this._viewMatrix = glMatrix.mat4.create();
         this._projectionMatrix = glMatrix.mat4.create();
         this._cameraPosition = glMatrix.vec3.create();
+        this._rsm;
     }
     bind()
     {
@@ -47,6 +48,10 @@ class DefaultRenderPass extends RenderPass
     {
         this._shadowMap = shadowMap.texture;
     }
+    set rsm(rsm)
+    {
+        this._rsm = rsm;
+    }
     setUniforms()
     {
         this.shader.setUniform("viewMatrix","mat4",this._viewMatrix);
@@ -54,6 +59,9 @@ class DefaultRenderPass extends RenderPass
         this.shader.setUniform("shadowMapMatrix","mat4",this._shadowMapMatrix);
         this.shader.setUniform("cameraPosition","vec3",this._cameraPosition);
         this.shader.setTexture("shadowMapTexture",this._shadowMap,3);
+        this.shader.setTexture("albedoRSM",this._rsm.albedoTexture,4);
+        this.shader.setTexture("normalRSM",this._rsm.normalTexture,5);
+        this.shader.setTexture("positionRSM",this._rsm.positionTexture,6);
     }
     set projectionMatrix(matrix)
     {
@@ -71,7 +79,12 @@ class DefaultRenderPass extends RenderPass
     {
         this._cameraPosition = position;
     }
+    clear()
+    {
+        
+        gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
 
+    }
 }
 class ShadowmapRenderPass extends RenderPass
 {
@@ -133,7 +146,111 @@ class ShadowmapRenderPass extends RenderPass
     {
         return this._shadowMapMatrix;
     }
+    clear()
+    {
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+    }
 
+}
+class RSMRenderPass extends RenderPass
+{
+    constructor(gl,width,height)
+    {
+        const vertexShaderRSM = `#version 300 es
+        #pragma vscode_glsllint_stage : vert
+        layout(location = 0) in vec3 attrib_position;
+        layout(location = 1) in vec3 attrib_normal;
+        layout(location = 2) in vec2 attrib_texCoord;
+        layout(location = 3) in vec4 attrib_tangent;
+    
+        out vec3 var_position;
+        out vec2 var_uv;
+        out vec3 var_normal;
+        out vec3 var_tangent;
+
+        uniform mat4 shadowMapMatrix;
+        uniform mat4 modelMatrix;
+    
+        void main()
+        {
+    
+            vec4 position = shadowMapMatrix*modelMatrix*vec4(attrib_position,1.0);
+            var_position = vec3(modelMatrix*vec4(attrib_position,1.0));
+            var_uv = attrib_texCoord;
+            var_normal = attrib_normal;
+            var_tangent = attrib_tangent.xyz;
+            gl_Position = position;
+        }
+        `;
+        const fragmentShaderRSM = `#version 300 es
+        precision highp float;
+        #pragma vscode_glsllint_stage : frag
+        
+        uniform sampler2D normalTexture;
+        uniform sampler2D baseColorTexture;
+        
+        in vec3 var_position;
+        in vec2 var_uv;
+        in vec3 var_normal;
+        in vec3 var_tangent;
+    
+        layout(location = 0) out vec3 out_albedo;
+        layout(location = 1) out vec3 out_normal;
+        layout(location = 2) out vec4 out_position;
+        void main()
+        {
+            vec3 meshNormal = vec3(var_normal.x,var_normal.y,var_normal.z);
+            vec3 meshTangent = vec3(var_tangent.x,var_tangent.y,var_tangent.z);
+            vec3 bitangent = cross(normalize(meshTangent),normalize(meshNormal));
+    
+            mat3 TBN = mat3(var_tangent,bitangent,var_normal);
+            vec3 normalTexture = texture(normalTexture,var_uv).rgb;
+            normalTexture=(normalTexture.rgb-vec3(0.5f))*2.0f;
+    
+            out_albedo = texture(baseColorTexture,var_uv).rgb;
+            out_normal = meshNormal;
+            out_position = vec4(var_position,1.0);
+        }
+        `;
+        const shader = new ShaderProgram(gl,vertexShaderRSM,fragmentShaderRSM);    
+        const depthTexture = new DepthTexture(gl,width,height);
+        const albedoTexture = new UintDataTexture(gl,null,width,height);
+        const normalTexture = new UintDataTexture(gl,null,width,height);
+        const positionTexture = new FloatTexture(gl,width,height);
+        const framebuffer = new RSMFrameBuffer(gl,depthTexture,
+            [albedoTexture,normalTexture,positionTexture]
+            );
+        super(gl,framebuffer,shader);
+        this.width = width;
+        this.height = height;
+        this._shadowMap = depthTexture;
+        this.shadowMapMatrix = glMatrix.mat4.create();
+        this._modelMatrix = glMatrix.mat4.create();
+        this._rsm = {albedoTexture:albedoTexture.texture,
+            normalTexture:normalTexture.texture,
+            positionTexture:positionTexture.texture};
+    }
+    get rsm()
+    {
+        return this._rsm;
+    }
+    bind()
+    {
+        super.bind();
+        this.gl.viewport(0.0,0.0,this.width,this.height);
+    }
+    setUniforms()
+    {
+        this.shader.setUniform("shadowMapMatrix","mat4",this._shadowMapMatrix);
+    }
+    set shadowMapMatrix(matrix)
+    {
+        this._shadowMapMatrix = matrix;
+    }
+    get shadowMapMatrix()
+    {
+        return this._shadowMapMatrix;
+    }
 }
 class Framebuffer
 {
@@ -153,11 +270,12 @@ class Framebuffer
                     gl.FRAMEBUFFER, // target
                     gl.COLOR_ATTACHMENT0+i,//attachment point
                     gl.TEXTURE_2D, // texture target
-                    textures[i].glTexture, // texture
+                    colorTextures[i].texture, // texturet
                     0 // mip level
                 );
                 colorAttachments.push(gl.COLOR_ATTACHMENT0+i);
             }
+            gl.drawBuffers(colorAttachments);
             if(depthTexture!==null)
             {
                 gl.framebufferTexture2D(
@@ -219,7 +337,13 @@ class ShadowMapFrameBuffer extends Framebuffer
         super(gl,depthTexture);
     }
 };
-
+class RSMFrameBuffer extends Framebuffer
+{
+    constructor(gl,depthTexture,colorTextures){
+        super(gl,depthTexture,colorTextures);
+        
+    }
+}
 class Texture
 {
     constructor(gl,width,height)
@@ -273,6 +397,11 @@ class FloatTexture extends Texture
                 default:
                     throw new Error("Error: number of componets not supported");
         }
+        
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     }
 
 };
@@ -310,6 +439,17 @@ class UintDataTexture extends Texture
         switch(numOfChannels)
         {
             case 3:
+                gl.texImage2D(
+                    gl.TEXTURE_2D,
+                    0,
+                    gl.RGB,
+                    width,
+                    height,
+                    0,
+                    gl.RGB,
+                    gl.UNSIGNED_BYTE,
+                    data
+                );
                 break;
             case 4:
                 gl.texImage2D(
@@ -320,13 +460,18 @@ class UintDataTexture extends Texture
                     height,
                     0,
                     gl.RGBA,
-                    type,
+                    gl.UNSIGNED_BYTE,
                     data
                 );
                 break;
             default:
                 throw new Error("Error numsber of channels not supported");
         }
+        
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     }
     
 
@@ -617,7 +762,7 @@ class Material{
         
         shader.setTexture("baseColorTexture",this.#_baseColorTexture.texture,0);
         shader.setTexture("metallicRoughnessTexture",this.#_metallicRoughnessTexture.texture,1);
-        shader.setTexture("normalTextureTexture",this.#_normalTexture.texture,2);
+        shader.setTexture("normalTexture",this.#_normalTexture.texture,2);
 
 
     }
@@ -909,6 +1054,8 @@ class Renderer
         gl.clearColor(1.0,1.0,1.0,1.0);
 
         gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(gl.FRONT); 
     }
     get gl()
     {

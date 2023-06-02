@@ -10,7 +10,7 @@ uniform sampler2D metallicRoughnessTexture;
 uniform float metalnessFactor;
 uniform float RoughnessFactor;
 
-uniform sampler2D normalTextureTexture;
+uniform sampler2D normalTexture;
 
 //camera
 uniform vec3 cameraPosition;
@@ -41,7 +41,7 @@ in vec3 var_tangent;
 in vec3 var_position_wolrd;
 
 out vec4 out_color;
-const int sampleSizeConstant = 3;
+const int sampleSizeConstant = 1;
 const int sampleStartSample = -sampleSizeConstant;
 const int sampleEndSample = sampleSizeConstant;
 
@@ -106,53 +106,48 @@ void main()
    vec3 bitangent = normalize(cross(meshTangent,meshNormal));
    mat3 TBN = mat3(meshTangent,bitangent,meshNormal);
 
-   vec3 normalTexture = (texture(normalTextureTexture,var_texCoord).rgb);
-   normalTexture=(normalTexture.rgb-vec3(0.5f))*2.0f;
+   vec3 normalTexture = texture(normalTexture,var_texCoord).rgb;
+   normalTexture = (normalTexture.rgb - 0.5f) * 2.0f;
    vec3 normalP = normalize(TBN*normalTexture);
 
    vec2 shadowMapCoordinates = (var_shadowMapCoord.xy);
-   vec2 normalizedShadowMapCoordinates = (shadowMapCoordinates+vec2(1.0f))/2.0f;
+   vec2 normalizedShadowMapCoordinates = (shadowMapCoordinates + 1.0f) / 2.0f;
    vec3 indirectFlux=vec3(0.0f);
    
-   vec3 albedoIndirectDebug= texture(albedoRSM,normalizedShadowMapCoordinates).rgb;
-   vec3 normalIndirectDebug = texture(normalRSM,normalizedShadowMapCoordinates).rgb; 
-   vec3 positionIndirectDebug = texture(positionRSM,normalizedShadowMapCoordinates).rgb;
-   for(uint i=0u;i<0u;i++)
+   for(uint i=0u;i<100u;i++)
    {
 
    
       vec2 randomSamplePoint = (vec3(pcg3d(uvec3(i,0u,0u)))/vec3(pow(2.0f,32.0f))).xy;
-      //vec2 randomSamplePoint = vec2(0.0f);
-      //vec2 randomSamplePoint = texture(samplePoints,((float(i))/100.0f)).rg;
       vec2 samplePoint = (vec2(
-         normalizedShadowMapCoordinates.x + 0.05*randomSamplePoint.x*sin(2.0f*PI*randomSamplePoint.y),
-         normalizedShadowMapCoordinates.y + 0.05*randomSamplePoint.x*cos(2.0f*PI*randomSamplePoint.y)));
+         normalizedShadowMapCoordinates.x + 0.05*randomSamplePoint.x * sin(2.0f * PI * randomSamplePoint.y),
+         normalizedShadowMapCoordinates.y + 0.05*randomSamplePoint.x * cos(2.0f * PI * randomSamplePoint.y)));
          
 
-      vec3 albedoIndirect = texture(albedoRSM,samplePoint).rgb;
-      vec3 normalIndirect = texture(normalRSM,samplePoint).rgb; 
-      vec3 positionIndirect = texture(positionRSM,samplePoint).rgb;
+      vec3 albedoIndirect = texture(albedoRSM, samplePoint).rgb;
+      vec3 normalIndirect = texture(normalRSM, samplePoint).rgb; 
+      vec3 positionIndirect = texture(positionRSM, samplePoint).rgb;
 
       float numerator = 
-      max(0.0f,dot(meshNormal,positionIndirect-var_position))*
-      max(0.0f,dot(normalIndirect,var_position-positionIndirect));
+      max(0.0f,dot(meshNormal, positionIndirect - var_position)) *
+      max(0.0f,dot(normalIndirect, var_position - positionIndirect));
 
-      float positionDistance = distance(var_position,positionIndirect);
-      float denominator = positionDistance*positionDistance*positionDistance*positionDistance;
+      float positionDistance = distance(var_position, positionIndirect);
+      float denominator = positionDistance * positionDistance * positionDistance * positionDistance;
 
-      indirectFlux += randomSamplePoint.x*randomSamplePoint.x*albedoIndirect*0.01*numerator/denominator;
+      indirectFlux += randomSamplePoint.x * randomSamplePoint.x * albedoIndirect * 0.01 * numerator / denominator;
    }
-   float metallic = texture(metallicRoughnessTexture,var_texCoord).b;
-   float roughness = texture(metallicRoughnessTexture,var_texCoord).g;
+   float metallic = texture(metallicRoughnessTexture, var_texCoord).b;
+   float roughness = texture(metallicRoughnessTexture, var_texCoord).g;
 
 
-   vec3 light=normalize(inverse(mat3(shadowMapMatrix))*vec3(0.0,0.0,-1.0));
+   vec3 light = normalize(inverse(mat3(shadowMapMatrix)) * vec3(0.0,0.0,-1.0));//TODO precompute inverse shadowMatrix
    vec4 colorTextureWithAlpha = texture(baseColorTexture, var_texCoord);
-   if(colorTextureWithAlpha.a<0.9)
+   if(colorTextureWithAlpha.a < 0.9f)
    {
       discard;
    }
-   vec3 albedo = pow(colorTextureWithAlpha.rgb,vec3(2.2))*baseColorFactor.rgb;
+   vec3 albedo = pow(colorTextureWithAlpha.rgb, vec3(2.2)) * baseColorFactor.rgb;
 
 
    vec3 radiance = vec3(5.0);
@@ -181,54 +176,36 @@ void main()
    // add to outgoing radiance Lo
    float NdotL = max(dot(N, L), 0.0);                
    Lo = (kD * albedo / PI + specular) * radiance * NdotL; 
-   if(
-      shadowMapCoordinates.x<=1.0
-      &&
-      shadowMapCoordinates.y<=1.0
-      &&
-      shadowMapCoordinates.x>=-1.0
-      &&
-      shadowMapCoordinates.y>=-1.0
-   )
-   {
+
       
-      vec3 lightOriginToPosition = var_shadowMapCoord-vec3(0.0,0.0,-1.0);
-      float distanceFromLight = lightOriginToPosition.z/2.0;
+   vec3 lightOriginToPosition = var_shadowMapCoord-vec3(0.0,0.0,-1.0);
+   float distanceFromLight = lightOriginToPosition.z/2.0;
 
 
-      ivec2 textureSize= textureSize(shadowMapTexture,0);
-      vec2 sizeOfTexel = 1.0f/vec2(textureSize); 
-      vec2 normalizedShadowMapCoordinates = (shadowMapCoordinates+vec2(1.0f,1.0f))/2.0f;
-      //float shadowMapDepth = float(texture(shadowMapTexture,normalizedShadowMapCoordinates).r);
-        
-      float shadowWeight = 0.0f;
-      for(int i=sampleStartSample;i<=sampleEndSample;i++)
+   ivec2 textureSize= textureSize(shadowMapTexture,0);
+   vec2 sizeOfTexel = 1.0f / vec2(textureSize); 
+
+   float shadowWeight = 0.0f;
+   for(int i=sampleStartSample;i<=sampleEndSample;i++)
+   {
+      for(int j=sampleStartSample;j<=sampleEndSample;j++)
       {
-         for(int j=sampleStartSample;j<=sampleEndSample;j++)
+         vec2 coordDisplacement = normalizedShadowMapCoordinates+vec2(i,j)*sizeOfTexel;
+         float shadowMapDepth = float(texture(shadowMapTexture,coordDisplacement).r);
+         
+         if(distanceFromLight<shadowMapDepth+0.01)
          {
-            vec2 coordDisplacement = normalizedShadowMapCoordinates+vec2(i,j)*sizeOfTexel;
-            float shadowMapDepth = float(texture(shadowMapTexture,coordDisplacement).r);
-            
-            if(distanceFromLight<shadowMapDepth+0.01)
-            {
-               shadowWeight+=1.0;
-            }
+            shadowWeight+=1.0;
          }
       }
-      shadowWeight/=(float(sampleEndSample-sampleStartSample)+1.0f)*(float(sampleEndSample-sampleStartSample)+1.0f);
+   }
+   shadowWeight /= (float(sampleEndSample-sampleStartSample) + 1.0f) * (float(sampleEndSample - sampleStartSample) + 1.0f);
 
-      out_color = vec4(Lo*shadowWeight+indirectFlux*albedo*3.0,1.0);
+   out_color = vec4(Lo * shadowWeight + indirectFlux * albedo * 15.0,1.0);
 
-     }
-     else{
-
-         out_color = vec4(0.0f,0.0f,0.0f,1.0f);
-    }
     
    float gamma = 2.2f;
    out_color.rgb = pow(out_color.rgb, vec3(1.0f/gamma));
-   //out_color = vec4(depth,0.0f,0.0f,1.0f);
-   //out_color = vec4(0.0,0.0,0.0,1.0);
 
  
 }

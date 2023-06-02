@@ -21,16 +21,21 @@ function main() {
         const mainShaderProgram = result[1];
         let defaultRenderPass = new DefaultRenderPass(renderer.gl,mainShaderProgram,canvasElement.offsetWidth,canvasElement.offsetHeight);
         const shadowMapRenderPass = new ShadowmapRenderPass(renderer.gl,2048,2048);
+        const rsmRenderPass= new RSMRenderPass(renderer.gl,512,512);
         const loop = ()=>{
             
             shadowMapRenderPass.shadowMapMatrix = gui.shadowMapMatrix;
+            rsmRenderPass.shadowMapMatrix = gui.shadowMapMatrix;
             renderer.draw(drawble,shadowMapRenderPass);
+            renderer.draw(drawble,rsmRenderPass);
 
             defaultRenderPass.projectionMatrix = camera.cameraMatrices.projectionMatrix;
             defaultRenderPass.cameraPosition = camera.cameraMatrices.cameraPosition;
             defaultRenderPass.viewMatrix = camera.cameraMatrices.viewMatrix;
 
             defaultRenderPass.shadowMap = shadowMapRenderPass.shadowMap;
+            defaultRenderPass.rsm = rsmRenderPass.rsm;
+
             defaultRenderPass.shadowMapMatrix = shadowMapRenderPass.shadowMapMatrix;
 
             renderer.draw(drawble,defaultRenderPass);
