@@ -110,11 +110,20 @@ class Camera{
         });
         this.#deltaPosition = { forward: 0, left: 0 };
         //this.#inputData = { deltaPosition: this.#deltaPosition, deltaMouse: this.#deltaMouse };
-    
+
+
         this.#lastTime = 0;
         this.#delta = 0;
-        this.#forwardDirection = glMatrix.vec3.fromValues(0.0,0.0,1.0);
-        this.#position = glMatrix.vec3.create();
+        this.#forwardDirection = glMatrix.vec3.fromValues(
+            -0.9267086982727051,
+            0.1860613077878952,
+            -0.3264854848384857
+        );
+        this.#position = glMatrix.vec3.fromValues(
+            7.51,
+            -5.57,
+            1.57
+        );
     }
     #deltaPosition;
     #lastTime;

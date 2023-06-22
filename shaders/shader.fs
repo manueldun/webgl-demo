@@ -125,6 +125,7 @@ void main()
          
 
       vec3 albedoIndirect = texture(albedoRSM, samplePoint).rgb;
+      albedoIndirect = pow(albedoIndirect.rgb, vec3(2.2));
       vec3 normalIndirect = texture(normalRSM, samplePoint).rgb; 
       vec3 positionIndirect = texture(positionRSM, samplePoint).rgb;
 
@@ -150,7 +151,7 @@ void main()
    vec3 albedo = pow(colorTextureWithAlpha.rgb, vec3(2.2)) * baseColorFactor.rgb;
 
 
-   vec3 radiance = vec3(5.0);
+   vec3 radiance = vec3(10.0);
    // cook-torrance brdf
    
    vec3 F0 = vec3(0.04); 

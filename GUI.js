@@ -8,7 +8,7 @@ class GUI
             "position z": 0.0,
             "vertical angle": 73.46,
             "horizontal angle": 54.25,
-            "scale": 25.0,
+            "scale": 20.0,
             "Animate light": false
         };
     

@@ -28,14 +28,14 @@ class DefaultRenderPass extends RenderPass
     {
         const framebuffer = new DefaultFrameBuffer(gl);
         super(gl,framebuffer,shader);
-        this._shadowMap;
-        this._shadowMapMatrix = glMatrix.mat4.create();
-        this.width = width;
-        this.height = height;
-        this._viewMatrix = glMatrix.mat4.create();
-        this._projectionMatrix = glMatrix.mat4.create();
-        this._cameraPosition = glMatrix.vec3.create();
-        this._rsm;
+        this.#_shadowMap;
+        this.#_shadowMapMatrix = glMatrix.mat4.create();
+        this.#_width = width;
+        this.#_height = height;
+        this.#_viewMatrix = glMatrix.mat4.create();
+        this.#_projectionMatrix = glMatrix.mat4.create();
+        this.#_cameraPosition = glMatrix.vec3.create();
+        this.#_rsm;
     }
     bind()
     {
@@ -44,40 +44,56 @@ class DefaultRenderPass extends RenderPass
         this.gl.viewport(0.0,0.0,this.width,this.height);
         
     }
+    #_width;
+    get width()
+    {
+        return this.#_width;
+    }
+    #_height;
+    get height()
+    {
+        return this.#_height;
+    }
+    #_shadowMap;
     set shadowMap(shadowMap)
     {
-        this._shadowMap = shadowMap.texture;
+        this.#_shadowMap = shadowMap.texture;
     }
+    #_rsm;
     set rsm(rsm)
     {
-        this._rsm = rsm;
+        this.#_rsm = rsm;
     }
     setUniforms()
     {
-        this.shader.setUniform("viewMatrix","mat4",this._viewMatrix);
-        this.shader.setUniform("projectionMatrix","mat4",this._projectionMatrix);
-        this.shader.setUniform("shadowMapMatrix","mat4",this._shadowMapMatrix);
-        this.shader.setUniform("cameraPosition","vec3",this._cameraPosition);
-        this.shader.setTexture("shadowMapTexture",this._shadowMap,3);
-        this.shader.setTexture("albedoRSM",this._rsm.albedoTexture,4);
-        this.shader.setTexture("normalRSM",this._rsm.normalTexture,5);
-        this.shader.setTexture("positionRSM",this._rsm.positionTexture,6);
+        this.shader.setUniform("viewMatrix","mat4",this.#_viewMatrix);
+        this.shader.setUniform("projectionMatrix","mat4",this.#_projectionMatrix);
+        this.shader.setUniform("shadowMapMatrix","mat4",this.#_shadowMapMatrix);
+        this.shader.setUniform("cameraPosition","vec3",this.#_cameraPosition);
+        this.shader.setTexture("shadowMapTexture",this.#_shadowMap,3);
+        this.shader.setTexture("albedoRSM",this.#_rsm.albedoTexture,4);
+        this.shader.setTexture("normalRSM",this.#_rsm.normalTexture,5);
+        this.shader.setTexture("positionRSM",this.#_rsm.positionTexture,6);
     }
+    #_projectionMatrix;
     set projectionMatrix(matrix)
     {
-        this._projectionMatrix = matrix;
+        this.#_projectionMatrix = matrix;
     }
+    #_shadowMapMatrix;
     set shadowMapMatrix(matrix)
     {
-        this._shadowMapMatrix = matrix;
+        this.#_shadowMapMatrix = matrix;
     }
+    #_viewMatrix;
     set viewMatrix(matrix)
     {
-        this._viewMatrix = matrix;
+        this.#_viewMatrix = matrix;
     }
+    #_cameraPosition;
     set cameraPosition(position)
     {
-        this._cameraPosition = position;
+        this.#_cameraPosition = position;
     }
     clear()
     {
@@ -118,33 +134,53 @@ class ShadowmapRenderPass extends RenderPass
         const depthTexture = new DepthTexture(gl,width,height);
         const framebuffer = new ShadowMapFrameBuffer(gl,depthTexture);
         super(gl,framebuffer,shader);
-        this.width = width;
-        this.height = height;
-        this._shadowMap = depthTexture;
-        this.shadowMapMatrix = glMatrix.mat4.create();
-        this._modelMatrix = glMatrix.mat4.create();
+        this.#_width = width;
+        this.#_height = height;
+        this.#_shadowmap = depthTexture;
+        this.#_shadowMapMatrix = glMatrix.mat4.create();
+        this.#_modelMatrix = glMatrix.mat4.create();
     }
-
+    #_modelMatrix;
+    get modelMatrix()
+    {
+        return this.#_modelMatrix;
+    }
+    set modelMatrix(matrix)
+    {
+        this.#_modelMatrix = matrix;
+    }
+    #_width;
+    get width()
+    {
+        return this.#_width;
+    }
+    #_height;
+    get height()
+    {
+        return this.#_height;
+    }
+    #_shadowmap;
     get shadowMap()
     {
-        return this._shadowMap;
+        return this.#_shadowmap;
     }
     bind()
     {
         super.bind();
-        this.gl.viewport(0.0,0.0,this.width,this.height);
+        this.gl.viewport(0.0,0.0,this.#_width,this.#_height);
     }
     setUniforms()
     {
-        this.shader.setUniform("shadowMapMatrix","mat4",this._shadowMapMatrix);
+        this.shader.setUniform("shadowMapMatrix","mat4",this.#_shadowMapMatrix);
     }
+    #_shadowMapMatrix;
     set shadowMapMatrix(matrix)
     {
-        this._shadowMapMatrix = matrix;
+        this.#_shadowMapMatrix = matrix;
     }
     get shadowMapMatrix()
     {
-        return this._shadowMapMatrix;
+        return this.#_shadowMapMatrix;
     }
     clear()
     {
@@ -221,18 +257,27 @@ class RSMRenderPass extends RenderPass
             [albedoTexture,normalTexture,positionTexture]
             );
         super(gl,framebuffer,shader);
-        this.width = width;
-        this.height = height;
-        this._shadowMap = depthTexture;
+        this.#_width = width;
+        this.#_height = height;
         this.shadowMapMatrix = glMatrix.mat4.create();
-        this._modelMatrix = glMatrix.mat4.create();
-        this._rsm = {albedoTexture:albedoTexture.texture,
+        this.#_rsm = {albedoTexture:albedoTexture.texture,
             normalTexture:normalTexture.texture,
             positionTexture:positionTexture.texture};
     }
+    #_width;
+    get width()
+    {
+        return this.#_width;
+    }
+    #_height;
+    get height()
+    {
+        return this.#_height;
+    }
+    #_rsm;
     get rsm()
     {
-        return this._rsm;
+        return this.#_rsm;
     }
     bind()
     {
@@ -498,7 +543,7 @@ class TextureFile extends Texture
         });
     }
 
-    #loadTexture(imageBlob,path)//TODO sampler info
+    #loadTexture(imageBlob,path)
     {
         const gl = this.gl;
         this.texture = gl.createTexture();
@@ -580,10 +625,6 @@ class ShaderProgram{
         this.#gl = gl;
         this.#shaderProgram = this.#compileShaderProgram(gl,vertexShaderSource,fragmentShaderSource);
         this.#uniformMapLocationMap = new Map();
-    }
-    existUniform(uniformName)//for textures
-    {
-        return this.#uniformMapLocationMap.has(uniformName);
     }
     setUniform(uniformName,uniformType,uniformData)
     {
@@ -783,15 +824,7 @@ class Material{
     {
         return this.#_normalTexture;
     }
-    static #asyncCompileMainShaderProgram()
-    {
-        const vertexShaderSourcePromise = getStringFile("/shaders/shader.vs");
-        const fragmentShaderSourcePromise = getStringFile("/shaders/shader.fs");
-        return Promise.all([vertexShaderSourcePromise,fragmentShaderSourcePromise])
-            .then((shaderSources)=>{
-                return new ShaderProgram(this.#gl,shaderSources[0],shaderSources[1])
-            })
-    }
+
 };
 class Drawble{
     #gl;
@@ -809,17 +842,17 @@ class Drawble{
         this.#rawBuffers = [];
         this.#textures = null;
         const currentDirectory = path.slice(0, path.lastIndexOf("/") + 1);
-        const materials = [];//TODO erase line?
         this.#getStringFile(path).then((stringFile)=>{
             this.#gltfObj = JSON.parse(stringFile);
-            return loadBuffers(this.#gltfObj.buffers,currentDirectory);//TODO include code into renderer.js
-        }).then((buffers)=>{//TODO buffer and textures can be load in parallel
-            this.#rawBuffers = loadBufferSlices(this.#gltfObj.bufferViews,buffers);
-            return Promise.all(this.#gltfObj.images.map((image)=>{
+
+            const bufferPromise = this.#loadBuffers(this.#gltfObj.buffers,currentDirectory);
+            const texturePromises = Promise.all(this.#gltfObj.images.map((image)=>{
                 return TextureFile.AsyncTextureFile(gl,currentDirectory+image.uri)
             }));
-        }).then((textures)=>{
-            this.#textures = textures;
+            return Promise.all([bufferPromise,texturePromises]);
+        }).then((bufferAndTextures)=>{
+            this.#rawBuffers = loadBufferSlices(this.#gltfObj.bufferViews,bufferAndTextures[0]);
+            this.#textures = bufferAndTextures[1];
             this.#setUpVAOs();
             onLoad();
         });
@@ -835,6 +868,24 @@ class Drawble{
     get nodeRoot()
     {
         return this.#_rootNode;
+    }
+
+    #loadBuffers(buffers,currentDirectory)
+    {
+        if(buffers!=undefined)
+        {
+            const numOfBuffers = buffers.length;
+            const onProgressBuffers = (event)=>{
+                if (event.lengthComputable)
+                loadingModelProgress = ((event.loaded / event.total*numOfBuffers) * 100).toFixed(2);
+        
+            };
+            let binFileBuffersPromises = buffers.map((buffer) => {
+                return getBinaryFile(currentDirectory + buffer.uri, onProgressBuffers);
+            });
+            return Promise.all(binFileBuffersPromises);
+        
+        }
     }
     #getStringFile(fileName) {
         return new Promise((resolve, reject) => {
